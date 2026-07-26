@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F9F5F2">
+<title>Fab City Index 3.0 — Full Stack Metrics Dashboard</title>
+<style>
+:root{
+  --surface-2:#fffefc; --surface-1:#f4f0ea; --surface-0:#F9F5F2;
+  --text-primary:#181614; --text-secondary:#5c5750; --text-muted:#948d82;
+  --border:rgba(24,22,20,0.09); --border-strong:rgba(24,22,20,0.18); --border-stronger:rgba(24,22,20,0.36);
+  --radius:8px;
+  --bg-accent:#E6F1FB; --text-accent:#0C447C; --border-accent:#378ADD;
+  --bg-success:#EAF3DE; --text-success:#27500A; --border-success:#639922;
+  --bg-warning:#FAEEDA; --text-warning:#633806; --border-warning:#BA7517;
+  --bg-danger:#FCEBEB; --text-danger:#791F1F; --border-danger:#E24B4A;
+  --green-50:#EAF3DE; --green-600:#639922; --green-800:#27500A;
+  --blue-50:#E6F1FB; --blue-600:#378ADD; --blue-800:#0C447C;
+  --amber-50:#FAEEDA; --amber-600:#BA7517; --amber-800:#633806;
+  --purple-50:#EEEDFE; --purple-600:#534AB7; --purple-800:#3C3489;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --font-voice:Georgia,"Iowan Old Style","Times New Roman",serif;
+}
+*{box-sizing:border-box;}
+body{margin:0; background:var(--surface-0); color:var(--text-primary); font-family:var(--font-sans); font-size:15px; line-height:1.65;}
+.wrap{max-width:1200px; margin:0 auto; padding:2rem 1.5rem 4rem;}
+.section-no{font-family:var(--font-mono); font-size:11px; letter-spacing:0.07em; color:var(--text-muted); margin:0 0 0.5rem; text-transform:uppercase;}
+h1{font-family:var(--font-voice); font-size:30px; font-weight:400; margin:0 0 0.5rem; line-height:1.25;}
+h2{font-size:19px; font-weight:500; margin:0 0 0.5rem;}
+h3{font-size:15px; font-weight:500; margin:0 0 0.4rem;}
+h4{font-size:13px; font-weight:500; margin:0 0 0.3rem; color:var(--text-secondary);}
+p{margin:0 0 0.85rem;}
+a{color:var(--text-accent);}
+.lede{font-size:16px; color:var(--text-secondary); max-width:74ch;}
+.plain{font-size:14px; color:var(--text-secondary);}
+.tiny{font-size:12px; color:var(--text-muted);}
+header.top{padding:1.5rem 0 1.25rem; border-bottom:0.5px solid var(--border); margin-bottom:1.25rem;}
+.meta-row{display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.85rem;}
+.pill{display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; border:0.5px solid var(--border-strong); background:var(--surface-1); font-size:12px; color:var(--text-secondary);}
+.pill.warn{background:var(--bg-warning); color:var(--text-warning); border-color:var(--border-warning);}
+.pill.info{background:var(--bg-accent); color:var(--text-accent); border-color:var(--border-accent);}
+nav.tabs{display:flex; gap:2px; margin-bottom:1.5rem; border-bottom:0.5px solid var(--border); flex-wrap:wrap;}
+nav.tabs button{background:none; border:none; padding:10px 14px; font-size:13.5px; font-weight:500; color:var(--text-secondary); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-0.5px; font-family:var(--font-sans);}
+nav.tabs button.active{color:var(--text-primary); border-bottom-color:var(--text-primary);}
+nav.tabs button:hover{color:var(--text-primary);}
+section.view{display:none;}
+section.view.active{display:block;}
+.card{background:var(--surface-2); border:0.5px solid var(--border); border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1.15rem;}
+.card.quiet{background:var(--surface-1); border:none;}
+.grid-2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem;}
+.grid-3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem;}
+.grid-4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0.85rem;}
+@media (max-width:860px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} }
+.stat{background:var(--surface-1); border-radius:var(--radius); padding:0.9rem 1rem;}
+.stat .value{font-size:24px; font-weight:500; font-family:var(--font-voice);}
+.stat .label{font-size:12px; color:var(--text-muted); margin-bottom:3px;}
+.stat .sub{font-size:12px; color:var(--text-secondary); margin-top:3px;}
+
+/* ---------- MATRIX ---------- */
+.matrix-scroll{overflow-x:auto; padding-bottom:4px;}
+table.matrix{border-collapse:separate; border-spacing:5px; width:100%; min-width:880px;}
+table.matrix th{font-size:12px; font-weight:500; color:var(--text-secondary); text-align:center; padding:4px;}
+.scale-head{display:flex; flex-direction:column; align-items:center; gap:1px;}
+.scale-head .role{font-size:10px; color:var(--text-muted); font-weight:400;}
+.scale-head .agg{font-size:9px; color:var(--text-muted); font-style:italic;}
+.pillar-label{font-size:12.5px; font-weight:500; padding:0 8px; height:124px; display:flex; flex-direction:column; justify-content:center;}
+.pillar-label .pl-sub{font-size:10px; color:var(--text-muted); font-weight:400; line-height:1.3; margin-top:2px;}
+.cell-btn{
+  width:100%; height:124px; border-radius:var(--radius); border:0.5px solid var(--border-strong);
+  cursor:pointer; padding:7px 8px; text-align:left; font-family:var(--font-sans);
+  display:flex; flex-direction:column; gap:2px; position:relative; overflow:hidden;
+  background:var(--surface-1); transition:transform .08s ease, box-shadow .08s ease;
+}
+.cell-btn:hover{transform:translateY(-1px); box-shadow:0 2px 8px rgba(24,22,20,0.10);}
+.cell-btn:focus-visible{outline:2px solid var(--border-accent); outline-offset:2px;}
+.cell-btn.is-estimate::after{
+  content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+  background:repeating-linear-gradient(45deg, rgba(24,22,20,0.055) 0 6px, transparent 6px 12px);
+}
+.cell-btn.is-gen12{border:1.5px solid var(--text-primary);}
+.cell-title{font-size:11px; font-weight:500; color:var(--text-primary); line-height:1.25;}
+.cell-read{font-family:var(--font-mono); font-size:17px; font-weight:500; line-height:1.1; margin-top:1px;}
+.cell-read.none{font-size:12px; font-family:var(--font-sans); font-style:italic; color:var(--text-muted); font-weight:400;}
+.cell-kind{
+  display:inline-flex; align-items:center; gap:4px; font-size:9.5px; font-weight:500;
+  padding:1px 6px; border-radius:999px; align-self:flex-start; text-transform:uppercase; letter-spacing:0.04em;
+}
+.kind-live{background:var(--green-50); color:var(--green-800);}
+.kind-static{background:var(--blue-50); color:var(--blue-800);}
+.kind-estimate{background:var(--amber-50); color:var(--amber-800);}
+.kind-none{background:var(--surface-0); color:var(--text-muted); border:0.5px solid var(--border-strong);}
+.cell-foot{margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; gap:4px;}
+.cell-w{font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted);}
+.cell-feeder{font-size:9.5px; color:var(--text-muted);}
+.gen12-flag{position:absolute; top:6px; right:7px; font-size:9px; font-weight:500; color:var(--text-primary); letter-spacing:0.03em;}
+
+.legend-block{margin-top:1rem; padding-top:0.85rem; border-top:0.5px solid var(--border);}
+.kaos-legend{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-secondary); flex-wrap:wrap;}
+.kaos-bar{height:12px; width:200px; border-radius:6px; flex:none; background:linear-gradient(to right, rgb(196,68,56), rgb(214,158,64), rgb(88,140,60)); border:0.5px solid var(--border-strong);}
+.legend-inline{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary); margin-top:0.6rem; align-items:center;}
+
+/* ---------- CELL DETAIL ---------- */
+#cellDetail{display:none;}
+#cellDetail.show{display:block;}
+.detail-close{float:right; background:none; border:0.5px solid var(--border-strong); border-radius:var(--radius); padding:4px 10px; cursor:pointer; font-size:12px; color:var(--text-secondary); font-family:var(--font-sans);}
+.badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:500; margin:0 5px 5px 0;}
+.badge-live{background:var(--green-50); color:var(--green-800);}
+.badge-partial{background:var(--blue-50); color:var(--blue-800);}
+.badge-mock{background:var(--amber-50); color:var(--amber-800);}
+.badge-placeholder{background:var(--surface-1); color:var(--text-muted); border:0.5px solid var(--border);}
+.badge-review{background:var(--purple-50); color:var(--purple-800);}
+.badge-site{background:var(--blue-50); color:var(--blue-800);}
+.badge-recon{background:var(--surface-1); color:var(--text-secondary); border:0.5px solid var(--border-strong);}
+.badge-gen12{background:var(--text-primary); color:var(--surface-2);}
+.q-line{font-family:var(--font-voice); font-size:17px; line-height:1.4; margin:0.35rem 0 0.75rem;}
+table.ind{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:0.4rem;}
+table.ind th{text-align:left; font-weight:500; color:var(--text-muted); font-size:10.5px; padding:5px 7px; border-bottom:0.5px solid var(--border); text-transform:uppercase; letter-spacing:0.04em;}
+table.ind td{padding:6px 7px; border-bottom:0.5px solid var(--border); vertical-align:top;}
+table.ind tr:last-child td{border-bottom:none;}
+.dir-chip{display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:500;}
+.dir-dido{background:var(--green-50); color:var(--green-800);}
+.dir-pito{background:var(--bg-danger); color:var(--text-danger);}
+.feas-chip{display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:500;}
+.feas-high{background:var(--green-50); color:var(--green-800);}
+.feas-medium{background:var(--amber-50); color:var(--amber-800);}
+.feas-low{background:var(--surface-1); color:var(--text-muted); border:0.5px solid var(--border);}
+
+/* ---------- READING PANEL ---------- */
+.read-box{background:var(--surface-1); border-radius:var(--radius); padding:1rem 1.1rem; margin-top:1rem;}
+.read-tabs{display:flex; gap:3px; margin-bottom:0.85rem; border-bottom:0.5px solid var(--border);}
+.read-tabs button{background:none; border:none; padding:7px 12px; font-size:12.5px; font-weight:500; color:var(--text-secondary); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-0.5px; font-family:var(--font-sans);}
+.read-tabs button.active{color:var(--text-primary); border-bottom-color:var(--text-primary);}
+.read-pane{display:none;}
+.read-pane.active{display:block;}
+.read-pane label{display:block; font-size:12px; color:var(--text-secondary); margin:0 0 4px;}
+.read-pane input, .read-pane select, .read-pane textarea{
+  width:100%; font-size:13px; font-family:var(--font-sans); color:var(--text-primary); background:var(--surface-2);
+  border:0.5px solid var(--border-strong); border-radius:var(--radius); padding:7px 10px; margin-bottom:0.6rem;
+}
+.read-row{display:flex; gap:8px; align-items:flex-end;}
+.read-row > *{flex:1;}
+.btn{font-size:12.5px; font-weight:500; padding:7px 13px; border-radius:var(--radius); border:0.5px solid var(--border-strong); background:var(--surface-2); color:var(--text-primary); cursor:pointer; font-family:var(--font-sans);}
+.btn:hover{border-color:var(--border-stronger);}
+.btn.primary{background:var(--text-primary); color:var(--surface-2); border-color:var(--text-primary);}
+.status-line{font-size:12px; color:var(--text-muted); margin-top:0.4rem;}
+.status-line.ok{color:var(--text-success);}
+.status-line.err{color:var(--text-danger);}
+.current-read{background:var(--surface-2); border:0.5px solid var(--border); border-radius:var(--radius); padding:9px 11px; margin-bottom:0.8rem; font-size:12.5px; color:var(--text-secondary);}
+.current-read .big{font-family:var(--font-mono); font-size:16px; font-weight:500; color:var(--text-primary);}
+.slider-row{display:flex; align-items:center; gap:12px; margin:0.5rem 0 0.3rem;}
+.slider-row input[type=range]{flex:1; margin:0;}
+.slider-out{font-family:var(--font-mono); font-size:18px; font-weight:500; min-width:52px; text-align:right;}
+.slider-scale{display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-bottom:0.7rem;}
+.warn-note{background:var(--bg-warning); border:0.5px solid var(--border-warning); color:var(--text-warning); border-radius:var(--radius); padding:8px 11px; font-size:12px; margin-bottom:0.7rem;}
+
+/* ---------- GENERIC TABLES / LISTS ---------- */
+table.simple{width:100%; border-collapse:collapse; font-size:13.5px;}
+table.simple th{text-align:left; font-weight:500; color:var(--text-muted); font-size:11px; padding:7px 9px; border-bottom:0.5px solid var(--border); text-transform:uppercase; letter-spacing:0.04em;}
+table.simple td{padding:8px 9px; border-bottom:0.5px solid var(--border); vertical-align:top;}
+table.simple tr:last-child td{border-bottom:none;}
+code{font-family:var(--font-mono); font-size:12px; background:var(--surface-1); padding:1px 5px; border-radius:3px;}
+ul.plainlist{margin:0.3rem 0 0; padding-left:1.15rem;}
+ul.plainlist li{margin-bottom:5px; font-size:13.5px; color:var(--text-secondary);}
+.step-row{display:flex; gap:14px; padding:0.85rem 0; border-bottom:0.5px solid var(--border);}
+.step-row:last-child{border-bottom:none;}
+.step-n{flex:none; width:30px; height:30px; border-radius:50%; background:var(--surface-1); display:flex; align-items:center; justify-content:center; font-weight:500; font-size:13px;}
+.route-card{background:var(--surface-2); border:0.5px solid var(--border); border-radius:12px; padding:1rem 1.1rem;}
+.route-head{display:flex; align-items:baseline; gap:8px; margin-bottom:0.35rem;}
+.route-icon{font-size:16px; color:var(--text-secondary);}
+.kind-tag{font-size:10px; font-weight:500; padding:1px 7px; border-radius:999px; text-transform:uppercase; letter-spacing:0.04em;}
+
+/* ---------- WORKSHOP ---------- */
+.ws-toggle-row{display:flex; align-items:center; gap:10px; margin-top:1rem; flex-wrap:wrap;}
+.ws-switch{display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:500; padding:7px 14px; border-radius:999px; border:0.5px solid var(--border-strong); background:var(--surface-1); color:var(--text-secondary); font-family:var(--font-sans);}
+.ws-switch.active{background:var(--text-primary); color:var(--surface-2); border-color:var(--text-primary);}
+.ws-switch .dot{width:8px; height:8px; border-radius:50%; background:var(--text-muted);}
+.ws-switch.active .dot{background:#8fd14f;}
+.ws-setup{display:none; background:var(--surface-1); border-radius:var(--radius); padding:0.9rem 1rem; margin-top:0.8rem;}
+.ws-setup.show{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;}
+.ws-setup label{display:block; font-size:12px; color:var(--text-secondary); margin:0 0 4px;}
+.ws-setup input, .ws-setup select{font-size:13px; font-family:var(--font-sans); color:var(--text-primary); background:var(--surface-2); border:0.5px solid var(--border-strong); border-radius:var(--radius); padding:7px 10px;}
+.ws-counter{font-size:12.5px; color:var(--text-secondary); margin-top:0.55rem;}
+.ws-counter.over{color:var(--text-warning);}
+.ws-light-row{display:flex; gap:8px; margin:0.5rem 0 0.8rem;}
+.ws-light{flex:1; text-align:center; padding:9px 6px; border-radius:var(--radius); cursor:pointer; border:0.5px solid var(--border-strong); background:var(--surface-2); font-size:12px; font-weight:500; color:var(--text-secondary); font-family:var(--font-sans); line-height:1.35;}
+.ws-light small{display:block; font-weight:400; font-size:10.5px; color:var(--text-muted);}
+.ws-light.on-green{background:var(--green-50); border-color:var(--green-600); color:var(--green-800);}
+.ws-light.on-green small{color:var(--green-800);}
+.ws-light.on-yellow{background:var(--amber-50); border-color:var(--amber-600); color:var(--amber-800);}
+.ws-light.on-yellow small{color:var(--amber-800);}
+.ws-light.on-dark{background:var(--surface-0); border-color:var(--border-stronger); color:var(--text-secondary);}
+.chip-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle;}
+.footer{margin-top:2.5rem; padding-top:1.15rem; border-top:0.5px solid var(--border); font-size:12px; color:var(--text-muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="section-no">Fab City Foundation · research instrument · working build</p>
+  <h1>Measuring the Fab City</h1>
+  <p class="lede">Twenty parts of a city's life, read as four pillars across five scales — from a neighbourhood to a whole bioregion. Each cell asks one question, names the data that would answer it, and shows honestly whether that data is real yet.</p>
+  <div class="meta-row" id="metaRow"></div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-view="matrix" class="active">The matrix</button>
+  <button data-view="reading">How a cell gets its colour</button>
+  <button data-view="upload">Getting data in</button>
+  <button data-view="teams">Team data</button>
+  <button data-view="formula">The formula</button>
+  <button data-view="cities">Pilot cities</button>
+  <button data-view="stack">Full Stack</button>
+  <button data-view="workshop">Workshop</button>
+  <button data-view="cards">Workshop cards</button>
+  <button data-view="gaps">What we don't know</button>
+</nav>
+
+<!-- ================= MATRIX ================= -->
+<section class="view active" id="view-matrix">
+  <div class="card">
+    <p class="section-no">Section 01 — the instrument</p>
+    <h2>Four pillars × five scales = twenty cells</h2>
+    <p class="plain" style="max-width:78ch;">Each cell carries two documented weights that sum to 1: how much it counts toward <strong style="font-weight:500;">PITO</strong> (products in, trash out — the extractive side) and toward <strong style="font-weight:500;">DIDO</strong> (data in, data out — the capacity side). The colour you see is <em>not</em> those weights. It is the reading currently attached to that cell — red when the evidence says extractive, green when it says regenerative. Cells with no reading yet stay grey until somebody attaches one.</p>
+    <div class="matrix-scroll"><table class="matrix" id="matrixTable"></table></div>
+
+    <div class="legend-block">
+      <div class="kaos-legend">
+        <span style="font-weight:500;">0 · PITO</span>
+        <span class="kaos-bar"></span>
+        <span style="font-weight:500;">DIDO · 1</span>
+        <span class="tiny" style="margin-left:6px;">the reading, always oriented so green = regenerative</span>
+      </div>
+      <div class="legend-inline" id="kindLegend"></div>
+      <div class="legend-inline" id="feederLegend"></div>
+    </div>
+
+    <div class="ws-toggle-row">
+      <button class="ws-switch" id="wsToggle"><span class="dot"></span>Workshop mode</button>
+      <span class="tiny">Running WS3? Turn this on to dot the matrix as a table — green, yellow, dark.</span>
+    </div>
+    <div class="ws-setup" id="wsSetup">
+      <div><label>Table / participant</label><input type="text" id="wsTableName" placeholder="e.g. Table 4 — Ana"></div>
+      <div><label>City</label><select id="wsCity"></select></div>
+      <button class="btn primary" id="wsApplySetup">Start dotting</button>
+    </div>
+    <div class="ws-counter" id="wsCounter"></div>
+  </div>
+
+  <div class="card" id="cellDetail">
+    <button class="detail-close" id="closeDetail">Close ✕</button>
+    <div id="cellDetailBody"></div>
+  </div>
+</section>
+
+<!-- ================= READING / COLOUR ================= -->
+<section class="view" id="view-reading">
+  <div class="card">
+    <p class="section-no">Section 02 — reading the colour</p>
+    <h2>Three ways a cell gets its colour — and why they must never look alike</h2>
+    <p class="plain" style="max-width:78ch;">A live feed, a number from a report, and somebody's honest guess are three different kinds of knowledge. An instrument that renders them identically is lying by design. So each is drawn differently, and each says what it is on the cell face.</p>
+    <div class="grid-3" id="kindCards" style="margin-top:1rem;"></div>
+  </div>
+  <div class="card">
+    <h3>How a raw number becomes a 0–1 reading</h3>
+    <p class="plain">This is the step that has to be auditable, because it is where judgement enters. Every indicator declares its <strong style="font-weight:500;">direction</strong> and its <strong style="font-weight:500;">normalisation</strong> up front.</p>
+    <div class="grid-2" style="margin-top:0.85rem;">
+      <div class="card quiet">
+        <h4>Direction</h4>
+        <p class="plain" style="margin:0;">Some indicators mean the opposite of others. <span class="dir-chip dir-dido">DIDO</span> means a bigger raw number is better — more repairs, more open datasets. <span class="dir-chip dir-pito">PITO</span> means a bigger raw number is worse — more tonnes imported, more days of delay. PITO-direction indicators are inverted when normalised, so that on screen <strong style="font-weight:500;">green always means regenerative</strong>, never "big number".</p>
+      </div>
+      <div class="card quiet">
+        <h4>Normalisation</h4>
+        <p class="plain" style="margin:0;">Raw values are scaled into 0–1 against a stated reference — a peer group, a science-based target, or a practical ceiling. Following Boeing's discipline: priority × self-sufficiency where formal data exists, a documented proxy where it does not, flagged as such. The reference is written next to every indicator in the cell panel, so you can disagree with it specifically.</p>
+      </div>
+    </div>
+    <div class="warn-note" style="margin-top:1rem;">Upload raw values, never pre-normalised scores. If you convert 143 repairs to 0.7 in your own spreadsheet, nobody downstream can see how you got there — and the reading stops being auditable.</div>
+  </div>
+</section>
+
+<!-- ================= UPLOAD ================= -->
+<section class="view" id="view-upload">
+  <div class="card">
+    <p class="section-no">Section 03 — getting data in</p>
+    <h2>Four ways a reading enters the index</h2>
+    <p class="plain" style="max-width:78ch;">You do not have to clean everything before you start. The platform does the structuring — a schema mapper for spreadsheets, field-by-field extraction for PDFs, validation for JSON. What you have to bring is the <em>discipline</em>: raw values, real units, honest dates, and a source somebody else could go and check.</p>
+    <div class="grid-2" id="routeCards" style="margin-top:1rem;"></div>
+  </div>
+
+  <div class="card">
+    <h3>What happens to your file after you drop it</h3>
+    <p class="plain">Nothing commits silently. Confident extractions go straight in; everything else waits for a person.</p>
+    <div id="pipelineSteps"></div>
+  </div>
+
+  <div class="card">
+    <h3>The spreadsheet schema</h3>
+    <p class="plain">If you are uploading CSV or Excel, these are the columns the mapper looks for. Only the first six are required — but the optional ones are what make a number still trustworthy a year from now.</p>
+    <div class="matrix-scroll"><table class="simple" id="csvSchemaTable"></table></div>
+    <div style="margin-top:0.9rem; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn primary" id="dlTemplate">Download blank CSV template</button>
+      <button class="btn" id="dlExample">Download filled example</button>
+    </div>
+    <div class="status-line" id="dlStatus"></div>
+  </div>
+
+  <div class="card">
+    <h3>Seven rules that decide whether your data survives contact with reality</h3>
+    <div id="hygieneList"></div>
+  </div>
+
+  <div class="card">
+    <h3>Who can actually produce each number — the sovereignty audit</h3>
+    <p class="plain" style="max-width:78ch;" id="sovHeadline"></p>
+    <div class="matrix-scroll"><table class="simple" id="sovTable"></table></div>
+    <p class="plain" style="margin-top:0.9rem; max-width:78ch;" id="sovImplication"></p>
+  </div>
+
+  <div class="card">
+    <h3>Nine sources the network already owns</h3>
+    <p class="plain" style="max-width:78ch;">This is the way out of the problem above. These are not in the original theoretical indicator sheet — they were added afterwards precisely because the network needed sources of its own at City and Region scale. They are real, already queryable, and for a workshop participant they are the highest-value targets in the whole instrument: reachable this month, and they light up cells that would otherwise stay dark.</p>
+    <div class="matrix-scroll"><table class="simple" id="netSourcesTable"></table></div>
+  </div>
+</section>
+
+<!-- ================= TEAM DATA ================= -->
+<section class="view" id="view-teams">
+  <div class="card">
+    <p class="section-no">Section 03b — team submissions</p>
+    <h2>Load a team's data into the matrix</h2>
+    <p class="plain" style="max-width:78ch;">Workshop teams put a CSV in <code>data/submissions/</code> of this repository. This panel reads those files and turns each row into a cell reading — the same normalisation the rest of the instrument uses, with the same provenance rules. Nothing is invented: a row without a source or an observation date is rejected and told why.</p>
+
+    <div class="grid-2" style="margin-top:1rem;">
+      <div class="card quiet" style="margin:0;">
+        <h4>From this repository</h4>
+        <p class="tiny">Works when the page is served over http (GitHub Pages, or <code>python3 -m http.server</code>). Reads <code>data/submissions/index.json</code>.</p>
+        <button class="btn primary" id="loadRepoBtn">Load submissions from repo</button>
+        <div class="status-line" id="repoStatus"></div>
+      </div>
+      <div class="card quiet" style="margin:0;">
+        <h4>From your computer</h4>
+        <p class="tiny">Always works, including when you open the file directly. Nothing is uploaded anywhere — it is parsed in your browser.</p>
+        <input type="file" id="teamFile" accept=".csv" style="width:100%; font-size:13px; background:var(--surface-2); border:0.5px solid var(--border-strong); border-radius:var(--radius); padding:7px 10px;">
+        <div class="status-line" id="fileStatus"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn" id="clearLoadedBtn">Clear all loaded team readings</button>
+      <a class="btn" href="data/template.csv" download style="text-decoration:none; display:inline-block;">Download blank template</a>
+    </div>
+  </div>
+
+  <div class="card" id="loadReportCard" style="display:none;">
+    <h3>What was loaded</h3>
+    <div class="matrix-scroll"><table class="simple" id="loadReport"></table></div>
+  </div>
+
+  <div class="card">
+    <h3>How to submit as a team</h3>
+    <div id="submitSteps"></div>
+  </div>
+</section>
+
+<!-- ================= FORMULA ================= -->
+<section class="view" id="view-formula">
+  <div class="card">
+    <p class="section-no">Section 04 — the formula</p>
+    <h2>An index that is a product, not a sum</h2>
+    <div style="font-family:var(--font-mono); font-size:19px; text-align:center; padding:1.4rem 1rem; background:var(--surface-1); border-radius:var(--radius); margin:0.7rem 0 0.5rem;" id="formulaBox"></div>
+    <p class="q-line" style="text-align:center;" id="formulaPlain"></p>
+    <p class="plain" style="max-width:78ch;" id="whyProduct"></p>
+  </div>
+  <div class="grid-3" id="termCards"></div>
+  <div class="card">
+    <h3>The Boeing recovery — how the old 37/100 survives inside this</h3>
+    <p class="plain" id="boeingPlain" style="font-size:15px;"></p>
+    <p class="plain" id="boeingText"></p>
+    <div class="grid-3" style="margin-top:0.9rem;">
+      <div class="stat"><div class="label">Paris · Utopies 2018</div><div class="value">37.58</div><div class="sub">one cell: Economic × Region</div></div>
+      <div class="stat"><div class="label">Hamburg · Boeing 2024</div><div class="value">37.00</div><div class="sub">one cell, six years later</div></div>
+      <div class="stat"><div class="label">FCI 3.0 adds</div><div class="value">19 cells</div><div class="sub">plus the ρ coupling term</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Where the adding stops</h3>
+    <p class="plain" id="aggPlain" style="font-size:15px;"></p>
+    <p class="tiny" id="aggTech"></p>
+  </div>
+  <div class="card quiet">
+    <h3>Attribution is not aggregation</h3>
+    <p class="plain" id="attribution" style="margin:0;"></p>
+  </div>
+</section>
+
+<!-- ================= CITIES ================= -->
+<section class="view" id="view-cities">
+  <div class="card">
+    <p class="section-no">Section 05 — pilots</p>
+    <h2>Where each city sits, and which way it is heading</h2>
+    <p class="plain" style="max-width:78ch;">PITO runs left to right: how much the city still buys far and wastes near. DIDO runs bottom to top: how much it can sense, share and make locally. The top-left corner is the target. Paris and Hamburg are reconstructed points from single-cell measurements, shown to locate the ceiling — not new readings.</p>
+    <div id="citySelectRow" style="display:flex; gap:8px; flex-wrap:wrap; margin:1rem 0;"></div>
+    <div style="position:relative; width:100%;"><svg id="phasePlot" viewBox="0 0 660 430" style="width:100%; height:auto;"></svg></div>
+  </div>
+  <div class="card" id="cityDetailCard"></div>
+</section>
+
+<!-- ================= FULL STACK ================= -->
+<section class="view" id="view-stack">
+  <div class="card">
+    <p class="section-no">Section 06 — the architecture underneath</p>
+    <h2>The seven layers of the Fab City Full Stack</h2>
+    <p class="plain" style="max-width:78ch;">Not a ladder — seven interdependent layers, from the machines in the lab to the knowledge the network shares back. Layers 1–4 are operational, closest to direct action. Layer 5 governs. Layers 6–7 are the boundary and horizon the rest has to fit inside. The matrix is what you get when you fold this vertical architecture against territory.</p>
+    <div id="layersList" style="margin-top:1rem;"></div>
+    <p class="tiny" style="margin-top:0.9rem;">Diez, Charny &amp; Kohtala (2024), <em>The Fab City Full Stack</em>, Fab City Foundation.</p>
+  </div>
+  <div class="card">
+    <h3>Feasibility — start where the records already are</h3>
+    <p class="plain">The single most useful filter when choosing what to measure first. Feasibility depends less on how sophisticated an indicator is than on how close it sits to paperwork somebody already keeps.</p>
+    <div class="grid-3" id="feasCards" style="margin-top:0.85rem;"></div>
+  </div>
+</section>
+
+<!-- ================= WORKSHOP ================= -->
+<section class="view" id="view-workshop">
+  <div class="card">
+    <p class="section-no">Section 07 — WS3, FAB26 Boston</p>
+    <h2>Why this room, and why now</h2>
+    <div class="grid-4" id="stakesRow" style="margin:1rem 0;"></div>
+    <p class="plain" style="max-width:78ch; font-size:15px;" id="whyMatters"></p>
+  </div>
+  <div class="card">
+    <h3>Why the exercise happens on the bottom row</h3>
+    <p class="plain" style="max-width:78ch;">This is the part worth saying out loud, because it is the difference between a workshop that feels like homework and one that feels like power. We audited every indicator in the framework and asked a blunt question: who can actually produce this number?</p>
+    <div class="grid-4" style="margin:1rem 0;" id="wsSovStats"></div>
+    <p class="plain" style="max-width:78ch;">The network owns the Community row and almost nothing above it. So the exercise puts you where you have sovereignty — and then shows you the nine network sources that are the honest route upward. You are not being asked to guess about the planet. You are being asked what you could pull this month, and who you would have to email for the rest.</p>
+    <button class="btn" id="jumpToSources" style="margin-top:0.3rem;">See the nine network sources ↗</button>
+  </div>
+  <div class="card">
+    <h3>What you will do — 17 minutes, three moves</h3>
+    <div id="wsSteps"></div>
+  </div>
+  <div class="card quiet">
+    <h3>What you leave with</h3>
+    <p class="plain" style="margin:0;" id="wsAfter"></p>
+  </div>
+</section>
+
+<!-- ================= CARDS ================= -->
+<section class="view" id="view-cards">
+  <div class="card">
+    <p class="section-no">Section 08 — collection sheet</p>
+    <h2>Workshop cards</h2>
+    <p class="plain">Every card dotted on this device, in one list — for the facilitator to read out, photograph, or copy at the hard gate.</p>
+    <div class="matrix-scroll"><table class="simple" id="wsCardTable"></table></div>
+    <div style="margin-top:0.9rem; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn" id="wsCopyBtn">Copy as text</button>
+      <button class="btn" id="wsCsvBtn">Download as CSV</button>
+      <button class="btn" id="wsClearAllBtn">Clear all cards</button>
+    </div>
+    <div class="status-line" id="wsCopyStatus"></div>
+  </div>
+</section>
+
+<!-- ================= GAPS ================= -->
+<section class="view" id="view-gaps">
+  <div class="card">
+    <p class="section-no">Section 09 — named honestly</p>
+    <h2>What this instrument does not yet know</h2>
+    <p class="plain" style="max-width:78ch;">Naming these in the body of the methodology is the price of the credibility the instrument asks for. Every one of them is from the FCI 3.0 methodology's own open-gaps section, or from the evidence review behind it.</p>
+    <ol id="gapsList" style="padding-left:1.2rem; margin-top:0.9rem;"></ol>
+  </div>
+  <div class="card">
+    <h3>Where each number in this dashboard comes from</h3>
+    <p class="plain">Two provenance classes, marked on every cell.</p>
+    <div class="grid-2" style="margin-top:0.85rem;">
+      <div class="card quiet">
+        <h4><span class="badge badge-site">documented</span></h4>
+        <p class="plain" style="margin:0;">Weights and notes published on the FCI 3.0 methodology page. Six cells: the Generation 1+2 pair (Economic × City and × Region), the three flagged for review (Economic × Bioregion, Environmental × Community, Economic × Community), and the two thinnest governance cells.</p>
+      </div>
+      <div class="card quiet">
+        <h4><span class="badge badge-recon">reconstructed</span></h4>
+        <p class="plain" style="margin:0;">Proposed here from Vivanco's FAB26 working paper to fill cells the v0 table has not yet published. A working proposal for discussion — not canon, and clearly marked everywhere it appears.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer" id="footerNote"></div>
+</section>
+
+</div>
+
+<script src="assets/data.js"></script>
+<script>
+/* ============================ helpers ============================ */
+const $  = (s, r) => (r||document).querySelector(s);
+const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+const esc = (s) => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeId = (k) => k.replace(/:/g,'__');
+const cellKeys = () => { const out=[]; PILLARS.forEach(p=>SCALES.forEach(s=>{ if(CELLS[p.id+':'+s.id]) out.push(p.id+':'+s.id); })); return out; };
+const cellLabel = (key) => {
+  const [pid,sid] = key.split(':');
+  const p = PILLARS.find(x=>x.id===pid), s = SCALES.find(x=>x.id===sid);
+  return (p?p.label:pid) + ' × ' + (s?s.label:sid);
+};
+
+/* colour: 0 = PITO red, 1 = DIDO green, through a warm midpoint */
+function kaos(score){
+  const t = Math.max(0, Math.min(1, score));
+  const stops = [[196,68,56],[214,158,64],[88,140,60]];
+  const seg = t<0.5 ? 0 : 1, lt = t<0.5 ? t/0.5 : (t-0.5)/0.5;
+  const a = stops[seg], b = stops[seg+1];
+  return { r:Math.round(a[0]+(b[0]-a[0])*lt), g:Math.round(a[1]+(b[1]-a[1])*lt), b:Math.round(a[2]+(b[2]-a[2])*lt) };
+}
+const kaosBg   = (s,a) => { const c=kaos(s); return `rgba(${c.r},${c.g},${c.b},${a})`; };
+const kaosInk  = (s)   => { const c=kaos(s); return `rgb(${Math.round(c.r*0.42)},${Math.round(c.g*0.42)},${Math.round(c.b*0.42)})`; };
+
+/* ============================ storage ============================ */
+const LS = {
+  read:   (k)   => { try{ return JSON.parse(localStorage.getItem('fci_read_'+k)||'null'); }catch(e){ return null; } },
+  setRead:(k,v) => localStorage.setItem('fci_read_'+k, JSON.stringify(v)),
+  delRead:(k)   => localStorage.removeItem('fci_read_'+k),
+  wsOn:   ()    => localStorage.getItem('fci_ws_mode')==='on',
+  setWs:  (v)   => localStorage.setItem('fci_ws_mode', v?'on':'off'),
+  setup:  ()    => { try{ return JSON.parse(localStorage.getItem('fci_ws_setup')||'{}'); }catch(e){ return {}; } },
+  setSetup:(v)  => localStorage.setItem('fci_ws_setup', JSON.stringify(v)),
+  cards:  ()    => { try{ return JSON.parse(localStorage.getItem('fci_ws_cards')||'{}'); }catch(e){ return {}; } },
+  setCards:(v)  => localStorage.setItem('fci_ws_cards', JSON.stringify(v))
+};
+const WS_LIMIT = 4;
+const WS_LIGHTS = {
+  green:  { label:'Green',  note:'could pull it this month', score:0.85, color:'var(--green-600)' },
+  yellow: { label:'Yellow', note:'exists but locked',        score:0.45, color:'var(--amber-600)' },
+  dark:   { label:'Dark',   note:'no data at all',           score:null, color:'var(--text-muted)' }
+};
+
+/* ============================ tabs ============================ */
+$$('#tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    $$('#tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    $$('section.view').forEach(v=>v.classList.remove('active'));
+    $('#view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view==='cards') buildCardTable();
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+
+/* ============================ header ============================ */
+$('#metaRow').innerHTML = [
+  `<span class="pill">${esc(META.methodologyStatus)}</span>`,
+  `<span class="pill info">${META.cellsPopulatedOnSite} of ${META.cellsTotal} cells populated upstream</span>`,
+  `<span class="pill warn">${META.weightsUnderReview.length} weight cells under review</span>`,
+  `<span class="pill">${cellKeys().length} cells · ${Object.values(CELLS).reduce((n,c)=>n+c.indicators.length,0)} indicators defined</span>`
+].join('');
+
+/* ============================ matrix ============================ */
+function readingFor(key){
+  if(LS.wsOn()){
+    const card = LS.cards()[key];
+    if(card){
+      const L = WS_LIGHTS[card.light];
+      return L && L.score!==null ? { kind:'estimate', score:L.score, ws:true, light:card.light, table:card.table } : { kind:'none', ws:true, light:card.light, table:card.table };
+    }
+    return null;
+  }
+  return LS.read(key);
+}
+
+function buildMatrix(){
+  const t = $('#matrixTable');
+  let h = '<tr><th></th>';
+  SCALES.forEach(s=>{
+    h += `<th><div class="scale-head"><span>${esc(s.label)}</span><span class="role">${esc(s.role.split('·')[0].trim())}</span><span class="agg">${s.aggregates?'adds up':'boundary only'}</span></div></th>`;
+  });
+  h += '</tr>';
+
+  PILLARS.forEach(p=>{
+    h += `<tr><td class="pillar-label" style="color:var(--${p.color}-800);">${esc(p.label)}<span class="pl-sub">${esc(p.plain.split('.')[0])}</span></td>`;
+    SCALES.forEach(s=>{
+      const key = p.id+':'+s.id, c = CELLS[key];
+      if(!c){ h += '<td></td>'; return; }
+      const r = readingFor(key);
+      const hasScore = r && typeof r.score === 'number';
+      const bg = hasScore ? kaosBg(r.score, r.kind==='estimate' ? 0.26 : 0.40) : '';
+      const ink = hasScore ? kaosInk(r.score) : 'var(--text-muted)';
+      const kind = r ? (r.kind||'none') : 'none';
+      const kindLbl = r
+        ? (r.ws ? (r.light||'dotted') : (READING_KINDS[kind] ? READING_KINDS[kind].short : kind))
+        : 'no reading';
+      h += `<td><button class="cell-btn ${kind==='estimate'?'is-estimate':''} ${c.generation12?'is-gen12':''}"
+              data-key="${esc(key)}" style="${bg?`background:${bg};`:''}"
+              aria-label="${esc(cellLabel(key))}">
+        ${c.generation12?'<span class="gen12-flag">GEN 1+2</span>':''}
+        <span class="cell-kind kind-${kind==='none'?'none':kind}">${esc(kindLbl)}</span>
+        <span class="cell-title">${esc(cellLabel(key))}</span>
+        ${hasScore
+          ? `<span class="cell-read" style="color:${ink};">${r.score.toFixed(2)}</span>`
+          : `<span class="cell-read none">no reading yet</span>`}
+        <span class="cell-foot">
+          <span class="cell-w">P ${c.pito.toFixed(2)} · D ${c.dido.toFixed(2)}</span>
+          <span class="cell-feeder">${esc((FEEDER_META[c.feeder]||{}).short||'')}</span>
+        </span>
+      </button></td>`;
+    });
+    h += '</tr>';
+  });
+  t.innerHTML = h;
+  $$('.cell-btn', t).forEach(b => b.addEventListener('click', ()=>showCell(b.dataset.key)));
+
+  $('#kindLegend').innerHTML = '<span style="font-weight:500; color:var(--text-primary);">Reading type:</span>' +
+    Object.keys(READING_KINDS).map(k=>`<span class="cell-kind kind-${k}">${esc(READING_KINDS[k].short)}</span>`).join('') +
+    '<span class="cell-kind kind-none">no reading</span>' +
+    '<span class="tiny">estimates are cross-hatched — judgement, not measurement</span>';
+
+  $('#feederLegend').innerHTML = '<span style="font-weight:500; color:var(--text-primary);">Who feeds it:</span>' +
+    Object.keys(FEEDER_META).map(k=>`<span>${esc(FEEDER_META[k].short)}</span>`).join('');
+
+  renderWsUI();
+}
+
+/* ============================ cell detail ============================ */
+function showCell(key){
+  const c = CELLS[key];
+  const [pid,sid] = key.split(':');
+  const scale = SCALES.find(x=>x.id===sid);
+  const ds = DATA_STATES[c.dataState] || {};
+  const feeder = FEEDER_META[c.feeder] || {};
+
+  const badges = [
+    `<span class="badge badge-${c.dataState}">${esc(ds.label)} upstream</span>`,
+    c.wSource==='site' ? '<span class="badge badge-site">weights documented</span>' : '<span class="badge badge-recon">weights reconstructed</span>',
+    c.underReview ? '<span class="badge badge-review">weight under review</span>' : '',
+    c.generation12 ? '<span class="badge badge-gen12">Generation 1+2 cell</span>' : '',
+    c.boundary ? '<span class="badge badge-placeholder">boundary — not aggregated</span>' : '',
+    c.thin ? '<span class="badge badge-placeholder">thinnest cells</span>' : ''
+  ].filter(Boolean).join('');
+
+  const indRows = c.indicators.map(i=>`
+    <tr>
+      <td><strong style="font-weight:500;">${esc(i.name)}</strong><div class="tiny" style="margin-top:2px;">${esc(i.source)}</div></td>
+      <td><code>${esc(i.unit)}</code></td>
+      <td><span class="dir-chip dir-${i.direction}">${i.direction==='dido'?'higher = better':'higher = worse'}</span></td>
+      <td class="tiny">${esc(i.norm)}</td>
+      <td><span class="feas-chip feas-${i.feasibility}">${esc(FEASIBILITY[i.feasibility].label)}</span></td>
+    </tr>`).join('');
+
+  $('#cellDetailBody').innerHTML = `
+    <h2 style="margin-bottom:0.15rem;">${esc(cellLabel(key))}</h2>
+    <div style="margin:0.5rem 0 0.25rem;">${badges}</div>
+    <p class="q-line">${esc(c.question)}</p>
+    <p class="plain" style="max-width:78ch;">${esc(c.note)}</p>
+    <p class="tiny">${esc(scale.plain)}</p>
+    <p class="tiny"><strong style="font-weight:500;">Who feeds this cell:</strong> ${esc(feeder.label)} — ${esc(feeder.plain)}</p>
+    <p class="tiny"><strong style="font-weight:500;">Upstream data state:</strong> ${esc(ds.label)} — ${esc(ds.plain)}</p>
+
+    <h3 style="margin-top:1.1rem;">Indicators that would answer this</h3>
+    <div class="matrix-scroll"><table class="ind">
+      <tr><th>Indicator &amp; typical source</th><th>Unit</th><th>Direction</th><th>How it becomes 0–1</th><th>Feasible?</th></tr>
+      ${indRows}
+    </table></div>
+
+    ${ LS.wsOn() ? renderWsCard(key) : renderReadingBox(key) }
+  `;
+  if(LS.wsOn()) wireWsCard(key); else wireReadingBox(key);
+  const panel = $('#cellDetail');
+  panel.classList.add('show');
+  if(typeof panel.scrollIntoView === 'function'){ try{ panel.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){} }
+}
+$('#closeDetail').addEventListener('click', ()=> $('#cellDetail').classList.remove('show'));
+
+/* ============================ reading box (3 modes) ============================ */
+function renderReadingBox(key){
+  const sid = safeId(key);
+  const r = LS.read(key) || {};
+  const mode = r.kind || 'static';
+  const sc = typeof r.score === 'number' ? r.score : 0.5;
+
+  const current = r.kind
+    ? `<div class="current-read">Current reading: <span class="big">${r.score.toFixed(2)}</span>
+         · <strong style="font-weight:500;">${esc(READING_KINDS[r.kind].label)}</strong>
+         — ${esc(READING_KINDS[r.kind].rigor)}
+         ${r.value?` · raw: ${esc(r.value)} ${esc(r.unit||'')}`:''}
+         ${r.obsDate?` · observed ${esc(r.obsDate)}`:''}
+         ${r.source?`<br><span class="tiny">source: ${esc(r.source)}</span>`:''}
+         ${r.url?`<br><span class="tiny">endpoint: ${esc(r.url)}</span>`:''}
+         ${r.by?`<br><span class="tiny">signed: ${esc(r.by)}</span>`:''}
+       </div>`
+    : `<div class="current-read" style="color:var(--text-muted);">No reading attached. This cell renders grey — which is the honest state, not a failure.</div>`;
+
+  return `
+  <div class="read-box">
+    <h3>Attach a reading</h3>
+    ${current}
+    <div class="read-tabs" id="rt-${sid}">
+      <button type="button" data-mode="live" class="${mode==='live'?'active':''}">Live feed</button>
+      <button type="button" data-mode="static" class="${mode==='static'?'active':''}">Static value</button>
+      <button type="button" data-mode="estimate" class="${mode==='estimate'?'active':''}">Estimate</button>
+    </div>
+
+    <div class="read-pane ${mode==='live'?'active':''}" data-pane="live">
+      <p class="tiny">${esc(READING_KINDS.live.plain)}</p>
+      <label>API endpoint returning JSON</label>
+      <input type="text" id="liveUrl-${sid}" placeholder="https://opendata.city.gov/api/indicator" value="${esc(mode==='live'?(r.url||''):'')}">
+      <label>Path to the value inside the JSON (dot notation)</label>
+      <input type="text" id="livePath-${sid}" placeholder="data.0.value" value="${esc(mode==='live'?(r.path||''):'')}">
+      <div class="read-row">
+        <label style="flex:2;">Raw value range for normalisation — min / max
+          <div class="read-row" style="margin-top:4px;">
+            <input type="number" step="any" id="liveMin-${sid}" placeholder="min" value="${esc(mode==='live'?(r.min??''):'')}">
+            <input type="number" step="any" id="liveMax-${sid}" placeholder="max" value="${esc(mode==='live'?(r.max??''):'')}">
+          </div>
+        </label>
+        <label style="flex:1;">Direction
+          <select id="liveDir-${sid}" style="margin-top:4px;">
+            <option value="dido" ${mode==='live'&&r.dir==='dido'?'selected':''}>higher = better</option>
+            <option value="pito" ${mode==='live'&&r.dir==='pito'?'selected':''}>higher = worse</option>
+          </select>
+        </label>
+      </div>
+      <div class="read-row" style="margin-top:0.2rem;">
+        <button type="button" class="btn" data-act="test-live" data-key="${esc(key)}">Test &amp; read now</button>
+        <button type="button" class="btn primary" data-act="save-live" data-key="${esc(key)}">Save live feed</button>
+      </div>
+      <div class="status-line" id="liveStatus-${sid}"></div>
+    </div>
+
+    <div class="read-pane ${mode==='static'?'active':''}" data-pane="static">
+      <p class="tiny">${esc(READING_KINDS.static.plain)}</p>
+      <label>Indicator this value belongs to</label>
+      <select id="statInd-${sid}">${CELLS[key].indicators.map((i,ix)=>`<option value="${ix}" ${mode==='static'&&r.indIx==ix?'selected':''}>${esc(i.name)} (${esc(i.unit)})</option>`).join('')}</select>
+      <div class="read-row">
+        <label style="flex:1;">Raw value as measured<input type="number" step="any" id="statVal-${sid}" placeholder="143" value="${esc(mode==='static'?(r.value??''):'')}"></label>
+        <label style="flex:1;">Observation date<input type="date" id="statDate-${sid}" value="${esc(mode==='static'?(r.obsDate||''):'')}"></label>
+      </div>
+      <div class="read-row">
+        <label style="flex:1;">Scale reference — min<input type="number" step="any" id="statMin-${sid}" placeholder="0" value="${esc(mode==='static'?(r.min??''):'')}"></label>
+        <label style="flex:1;">max<input type="number" step="any" id="statMax-${sid}" placeholder="200" value="${esc(mode==='static'?(r.max??''):'')}"></label>
+      </div>
+      <label>Source — specific enough to re-check</label>
+      <input type="text" id="statSrc-${sid}" placeholder="Open data portal, dataset 4471, downloaded 2026-06-02" value="${esc(mode==='static'?(r.source||''):'')}">
+      <label>Your name (this entry is signed)</label>
+      <input type="text" id="statBy-${sid}" placeholder="Ana Ruiz" value="${esc(mode==='static'?(r.by||''):'')}">
+      <button type="button" class="btn primary" data-act="save-static" data-key="${esc(key)}">Commit static reading</button>
+      <div class="status-line" id="statStatus-${sid}"></div>
+    </div>
+
+    <div class="read-pane ${mode==='estimate'?'active':''}" data-pane="estimate">
+      <div class="warn-note">${esc(READING_KINDS.estimate.plain)} It will render cross-hatched and labelled <em>estimate</em> so nobody downstream mistakes it for evidence.</div>
+      <div class="slider-row">
+        <input type="range" min="0" max="1" step="0.01" id="estSlider-${sid}" value="${sc}">
+        <span class="slider-out" id="estOut-${sid}" style="color:${kaosInk(sc)};">${sc.toFixed(2)}</span>
+      </div>
+      <div class="slider-scale"><span>0 — fully extractive (PITO)</span><span>fully regenerative (DIDO) — 1</span></div>
+      <label>Who is making this call</label>
+      <input type="text" id="estBy-${sid}" placeholder="Ana Ruiz" value="${esc(mode==='estimate'?(r.by||''):'')}">
+      <label>What it is based on</label>
+      <input type="text" id="estNote-${sid}" placeholder="Rough sense from two years running the repair café" value="${esc(mode==='estimate'?(r.note||''):'')}">
+      <button type="button" class="btn primary" data-act="save-est" data-key="${esc(key)}">Save estimate</button>
+    </div>
+
+    ${r.kind?`<button type="button" class="btn" style="margin-top:0.7rem;" data-act="clear" data-key="${esc(key)}">Remove reading</button>`:''}
+  </div>`;
+}
+
+function normalise(raw, min, max, dir){
+  const v = parseFloat(raw), lo = parseFloat(min), hi = parseFloat(max);
+  if(isNaN(v)) return null;
+  if(isNaN(lo) || isNaN(hi) || hi === lo) return null;
+  let t = (v - lo) / (hi - lo);
+  t = Math.max(0, Math.min(1, t));
+  return dir === 'pito' ? 1 - t : t;
+}
+
+function wireReadingBox(key){
+  const sid = safeId(key);
+  const tabs = $$('#rt-'+sid+' button');
+  tabs.forEach(b=> b.addEventListener('click', ()=>{
+    tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    $$('#cellDetailBody .read-pane').forEach(p=>p.classList.remove('active'));
+    const pane = $(`#cellDetailBody .read-pane[data-pane="${b.dataset.mode}"]`);
+    if(pane) pane.classList.add('active');
+  }));
+
+  const slider = $('#estSlider-'+sid);
+  if(slider) slider.addEventListener('input', ()=>{
+    const v = parseFloat(slider.value);
+    const out = $('#estOut-'+sid);
+    out.textContent = v.toFixed(2); out.style.color = kaosInk(v);
+  });
+
+  $$('#cellDetailBody [data-act]').forEach(b=> b.addEventListener('click', ()=>{
+    const k = b.dataset.key, act = b.dataset.act;
+    if(act==='clear'){ LS.delRead(k); showCell(k); buildMatrix(); return; }
+
+    if(act==='save-est'){
+      const v = parseFloat($('#estSlider-'+sid).value);
+      LS.setRead(k, { kind:'estimate', score:v, by:$('#estBy-'+sid).value.trim(), note:$('#estNote-'+sid).value.trim(), savedAt:new Date().toISOString().slice(0,10) });
+      showCell(k); buildMatrix(); return;
+    }
+
+    if(act==='save-static'){
+      const st = $('#statStatus-'+sid);
+      const ix = parseInt($('#statInd-'+sid).value,10);
+      const ind = CELLS[k].indicators[ix];
+      const val = $('#statVal-'+sid).value, min = $('#statMin-'+sid).value, max = $('#statMax-'+sid).value;
+      const score = normalise(val, min, max, ind.direction);
+      if(score===null){ st.textContent='Need a value plus a min and max that differ, so the raw number can be scaled.'; st.className='status-line err'; return; }
+      const date = $('#statDate-'+sid).value, src = $('#statSrc-'+sid).value.trim();
+      if(!date || !src){ st.textContent='Observation date and source are required — a value without them is not auditable.'; st.className='status-line err'; return; }
+      LS.setRead(k, { kind:'static', score, value:val, unit:ind.unit, indIx:ix, min, max, dir:ind.direction, obsDate:date, source:src, by:$('#statBy-'+sid).value.trim(), savedAt:new Date().toISOString().slice(0,10) });
+      showCell(k); buildMatrix(); return;
+    }
+
+    if(act==='test-live' || act==='save-live'){
+      const st = $('#liveStatus-'+sid);
+      const url = $('#liveUrl-'+sid).value.trim(), path = $('#livePath-'+sid).value.trim();
+      const min = $('#liveMin-'+sid).value, max = $('#liveMax-'+sid).value, dir = $('#liveDir-'+sid).value;
+      if(!url){ st.textContent='Enter an endpoint first.'; st.className='status-line err'; return; }
+      if(act==='save-live'){
+        const score = normalise(0, min, max, dir); // validate range only
+        LS.setRead(k, { kind:'live', score: typeof LS.read(k)?.score==='number'?LS.read(k).score:0.5, url, path, min, max, dir, savedAt:new Date().toISOString().slice(0,10) });
+        showCell(k); buildMatrix(); return;
+      }
+      st.textContent='Calling…'; st.className='status-line';
+      fetch(url,{mode:'cors'}).then(r=>r.json()).then(json=>{
+        let v = json; if(path) path.split('.').forEach(p=>{ if(v!=null) v=v[p]; });
+        const score = normalise(v, min, max, dir);
+        if(score===null){ st.textContent='Read '+JSON.stringify(v)+' but could not scale it — check min/max.'; st.className='status-line err'; return; }
+        LS.setRead(k, { kind:'live', score, url, path, min, max, dir, value:v, lastFetch:new Date().toISOString() });
+        st.textContent='Read '+JSON.stringify(v)+' → normalised '+score.toFixed(2)+'. Saved.'; st.className='status-line ok';
+        buildMatrix();
+      }).catch(()=>{
+        st.textContent='Could not reach this endpoint from the browser (CORS or network). You can still save it — a server-side fetch will pick it up.';
+        st.className='status-line err';
+      });
+    }
+  }));
+}
+
+/* ============================ workshop card ============================ */
+function renderWsCard(key){
+  const sid = safeId(key), setup = LS.setup(), cards = LS.cards(), card = cards[key];
+  if(!setup.table) return `<div class="read-box"><p class="plain" style="margin:0;">Enter your table name and city in the matrix panel above, then come back and dot this cell.</p></div>`;
+  const count = Object.values(cards).filter(c=>c.table===setup.table).length;
+  const atLimit = !card && count >= WS_LIMIT;
+  return `
+  <div class="read-box">
+    <h3>Dot this cell — ${esc(setup.table)} · ${esc(setup.city||'Boston')}</h3>
+    ${atLimit?`<div class="warn-note">You have dotted ${WS_LIMIT} cells already. The exercise asks for the 3–4 you actually know — not all twenty. Clear one first if this matters more.</div>`:''}
+    <div class="ws-light-row">
+      ${Object.keys(WS_LIGHTS).map(k=>`<button type="button" class="ws-light ${card&&card.light===k?'on-'+k:''}" data-light="${k}">${esc(WS_LIGHTS[k].label)}<small>${esc(WS_LIGHTS[k].note)}</small></button>`).join('')}
+    </div>
+    <label>Source — who would actually send you this</label>
+    <input type="text" id="wsSrc-${sid}" placeholder="City open-data officer, portal dataset 4471" value="${esc(card?card.source:'')}">
+    <label>Your name</label>
+    <input type="text" id="wsName-${sid}" placeholder="Ana" value="${esc(card?card.name:'')}">
+    <label>First step, and the real day you will take it</label>
+    <input type="text" id="wsStep-${sid}" placeholder="Email the data officer, Aug 4" value="${esc(card?card.firstStep:'')}">
+    <div class="read-row">
+      <button type="button" class="btn primary" data-ws="save" data-key="${esc(key)}">Save card</button>
+      ${card?`<button type="button" class="btn" data-ws="clear" data-key="${esc(key)}">Remove dot</button>`:''}
+    </div>
+    <div class="status-line" id="wsStatus-${sid}"></div>
+  </div>`;
+}
+
+function wireWsCard(key){
+  const sid = safeId(key);
+  let light = (LS.cards()[key]||{}).light || null;
+  $$('#cellDetailBody .ws-light').forEach(b=> b.addEventListener('click', ()=>{
+    light = b.dataset.light;
+    $$('#cellDetailBody .ws-light').forEach(x=>x.classList.remove('on-green','on-yellow','on-dark'));
+    b.classList.add('on-'+light);
+  }));
+  $$('#cellDetailBody [data-ws]').forEach(b=> b.addEventListener('click', ()=>{
+    const k = b.dataset.key, cards = LS.cards();
+    if(b.dataset.ws==='clear'){ delete cards[k]; LS.setCards(cards); showCell(k); buildMatrix(); return; }
+    const st = $('#wsStatus-'+sid);
+    if(!light){ st.textContent='Pick green, yellow or dark first.'; st.className='status-line err'; return; }
+    const setup = LS.setup();
+    cards[k] = { light, source:$('#wsSrc-'+sid).value.trim(), name:$('#wsName-'+sid).value.trim(),
+                 firstStep:$('#wsStep-'+sid).value.trim(), table:setup.table, city:setup.city||'Boston',
+                 date:new Date().toISOString().slice(0,10) };
+    LS.setCards(cards); showCell(k); buildMatrix();
+  }));
+}
+
+/* ============================ workshop mode UI ============================ */
+function renderWsUI(){
+  const on = LS.wsOn(), setup = LS.setup();
+  $('#wsToggle').classList.toggle('active', on);
+  $('#wsSetup').classList.toggle('show', on);
+  if(setup.table) $('#wsTableName').value = setup.table;
+  const sel = $('#wsCity');
+  if(!sel.options.length){
+    sel.innerHTML = CITIES.filter(c=>c.status!=='reconstructed')
+      .map(c=>`<option value="${esc(c.name)}" ${c.workshopHome?'selected':''}>${esc(c.name)}${c.workshopHome?' — host city, default':''}</option>`).join('')
+      + '<option value="Other">Other — my own city</option>';
+  }
+  if(setup.city) sel.value = setup.city;
+  const el = $('#wsCounter');
+  if(on && setup.table){
+    const n = Object.values(LS.cards()).filter(c=>c.table===setup.table).length;
+    el.textContent = `${setup.table} · ${setup.city||'Boston'} — ${n} of ${WS_LIMIT} cells dotted`;
+    el.classList.toggle('over', n>=WS_LIMIT);
+  } else el.textContent = on ? 'Enter a table name to start dotting.' : '';
+}
+$('#wsToggle').addEventListener('click', ()=>{ LS.setWs(!LS.wsOn()); $('#cellDetail').classList.remove('show'); buildMatrix(); });
+$('#wsApplySetup').addEventListener('click', ()=>{
+  const t = $('#wsTableName').value.trim();
+  if(!t){ $('#wsTableName').focus(); return; }
+  LS.setSetup({ table:t, city:$('#wsCity').value }); renderWsUI();
+});
+
+/* ============================ reading view ============================ */
+$('#kindCards').innerHTML = Object.keys(READING_KINDS).map(k=>{
+  const K = READING_KINDS[k];
+  return `<div class="card quiet" style="margin:0;">
+    <span class="cell-kind kind-${k}" style="margin-bottom:0.5rem;">${esc(K.short)}</span>
+    <h4 style="margin-top:0.4rem;">${esc(K.label)}</h4>
+    <p class="plain" style="margin:0 0 0.5rem;">${esc(K.plain)}</p>
+    <p class="tiny" style="margin:0;"><strong style="font-weight:500;">Counts as:</strong> ${esc(K.rigor)}</p>
+  </div>`;
+}).join('');
+
+/* ============================ upload view ============================ */
+$('#routeCards').innerHTML = INGESTION_ROUTES.map(r=>`
+  <div class="route-card">
+    <div class="route-head">
+      <span class="route-icon">${esc(r.icon)}</span>
+      <h3 style="margin:0;">${esc(r.name)}</h3>
+      <span class="kind-tag kind-${r.kind}">${esc(r.kind)}</span>
+    </div>
+    <p class="plain" style="margin-bottom:0.5rem;">${esc(r.oneLine)}</p>
+    <p class="tiny"><strong style="font-weight:500;">Best for:</strong> ${esc(r.goodFor)}</p>
+    <p class="tiny" style="margin-bottom:0.3rem;"><strong style="font-weight:500;">You need:</strong></p>
+    <ul class="plainlist" style="margin-top:0;">${r.youNeed.map(x=>`<li class="tiny">${esc(x)}</li>`).join('')}</ul>
+    <p class="tiny" style="margin-top:0.5rem;"><strong style="font-weight:500;">Effort:</strong> ${esc(r.effort)}<br><strong style="font-weight:500;">Produces:</strong> ${esc(r.produces)}</p>
+  </div>`).join('');
+
+$('#pipelineSteps').innerHTML = REVIEW_PIPELINE.map(s=>`
+  <div class="step-row">
+    <div class="step-n">${s.step}</div>
+    <div>
+      <h4 style="margin-bottom:0.15rem; color:var(--text-primary);">${esc(s.name)} — ${esc(s.plain)}</h4>
+      <p class="tiny" style="margin:0;">${esc(s.detail)}</p>
+    </div>
+  </div>`).join('');
+
+$('#csvSchemaTable').innerHTML =
+  '<tr><th>Column</th><th>Required</th><th>Example</th><th>What it is for</th></tr>' +
+  CSV_SCHEMA.map(c=>`<tr>
+    <td><code>${esc(c.col)}</code></td>
+    <td>${c.required?'<strong style="font-weight:500;">yes</strong>':'<span class="tiny">optional</span>'}</td>
+    <td class="tiny"><code>${esc(c.example)}</code></td>
+    <td class="tiny">${esc(c.plain)}</td>
+  </tr>`).join('');
+
+/* sovereignty audit */
+$('#sovHeadline').textContent = SOVEREIGNTY.headline;
+$('#sovImplication').textContent = SOVEREIGNTY.implication;
+$('#sovTable').innerHTML =
+  '<tr><th>Scale</th><th>Indicators</th><th>🔧 Lab can measure</th><th>⚖️ Mixed</th><th>🌐 Needs external</th><th>What that means</th></tr>' +
+  SOVEREIGNTY.byScale.map(s=>{
+    const sc = SCALES.find(x=>x.id===s.scale);
+    const pct = Math.round((s.lab/s.total)*100);
+    const bar = v => `<div style="height:5px; border-radius:3px; background:var(--surface-1); overflow:hidden; margin-top:3px;"><div style="height:100%; width:${Math.round((v/s.total)*100)}%; background:var(--green-600);"></div></div>`;
+    return `<tr>
+      <td><strong style="font-weight:500;">${esc(sc?sc.label:s.scale)}</strong></td>
+      <td class="tiny">${s.total}</td>
+      <td><strong style="font-weight:500; color:${s.lab?'var(--green-800)':'var(--text-muted)'};">${s.lab}</strong> <span class="tiny">(${pct}%)</span>${bar(s.lab)}</td>
+      <td>${s.mixed}</td>
+      <td>${s.external}</td>
+      <td class="tiny">${esc(s.verdict)}</td>
+    </tr>`;
+  }).join('');
+
+/* network-own sources */
+$('#netSourcesTable').innerHTML =
+  '<tr><th>Source</th><th>Feeds</th><th>Where it comes from</th><th>Effort</th><th>What it gives you</th></tr>' +
+  NETWORK_SOURCES.map(n=>`<tr>
+    <td><strong style="font-weight:500;">${esc(n.name)}</strong></td>
+    <td class="tiny">${esc(n.feeds)}</td>
+    <td class="tiny"><code>${esc(n.api)}</code></td>
+    <td><span class="feas-chip feas-${n.effort==='low'?'high':'medium'}">${esc(n.effort)}</span></td>
+    <td class="tiny">${esc(n.plain)}</td>
+  </tr>`).join('');
+
+$('#hygieneList').innerHTML = DATA_HYGIENE.map((h,i)=>`
+  <div class="step-row">
+    <div class="step-n">${i+1}</div>
+    <div>
+      <h4 style="margin-bottom:0.15rem; color:var(--text-primary);">${esc(h.rule)}</h4>
+      <p class="tiny" style="margin:0;">${esc(h.why)}</p>
+    </div>
+  </div>`).join('');
+
+function downloadCsv(name, rows){
+  const csv = rows.map(r=>r.map(f=>{
+    const s = String(f==null?'':f);
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+$('#dlTemplate').addEventListener('click', ()=>{
+  downloadCsv('fci-readings-template.csv', [CSV_SCHEMA.map(c=>c.col)]);
+  $('#dlStatus').textContent = 'Blank template downloaded — one row per observation, raw values only.'; $('#dlStatus').className='status-line ok';
+});
+$('#dlExample').addEventListener('click', ()=>{
+  const hdr = CSV_SCHEMA.map(c=>c.col);
+  const val = (o) => hdr.map(h => o[h] !== undefined ? o[h] : '');
+  const rows = [hdr,
+    val({cell:'environmental:community', indicator:'Products repaired', value:'143', unit:'units / month',
+         observation_date:'2026-06-30', source:'Repair café log, Sants', scale_min:'0', scale_max:'200',
+         team:'Table 4 — Boston', method:'Manual count at close of each session', geography:'Sants-Montjuïc',
+         confidence:'high', notes:'Two sessions cancelled in June; undercount likely'}),
+    val({cell:'social:community', indicator:'Participation in making activities', value:'312', unit:'unique people / month',
+         observation_date:'2026-06-30', source:'Workshop attendance sheets', scale_min:'0', scale_max:'400',
+         team:'Table 4 — Boston', method:'Sign-in sheet, deduplicated by email', geography:'Sants-Montjuïc', confidence:'high'}),
+    val({cell:'governance:community', indicator:'Council or assembly meetings held', value:'3', unit:'meetings / quarter',
+         observation_date:'2026-06-30', source:'Meeting calendar', scale_min:'0', scale_max:'4',
+         team:'Table 4 — Boston', method:'Counted from published minutes', geography:'Lab-wide', confidence:'high'})
+  ];
+  downloadCsv('fci-readings-example.csv', rows);
+  $('#dlStatus').textContent = 'Filled example downloaded — three high-feasibility community rows.'; $('#dlStatus').className='status-line ok';
+});
+
+/* ============================ formula view ============================ */
+$('#formulaBox').textContent = METHODOLOGY.formula;
+$('#formulaPlain').textContent = METHODOLOGY.formulaPlain;
+$('#whyProduct').textContent = METHODOLOGY.whyProduct;
+$('#termCards').innerHTML = ['dido','pito','rho'].map(k=>{
+  const T = METHODOLOGY.terms[k];
+  return `<div class="card" style="margin:0;">
+    <h3>${esc(T.name)}</h3>
+    <p class="q-line" style="font-size:15px; margin:0.3rem 0 0.6rem;">${esc(T.plain)}</p>
+    <p class="tiny">${esc(T.technical)}</p>
+    <p class="tiny" style="font-family:var(--font-mono); color:var(--text-secondary);">${esc(T.formula)}</p>
+  </div>`;
+}).join('');
+$('#boeingPlain').textContent = METHODOLOGY.boeingPlain;
+$('#boeingText').textContent = METHODOLOGY.boeing;
+$('#aggPlain').textContent = METHODOLOGY.aggregationPlain;
+$('#aggTech').textContent = METHODOLOGY.aggregation;
+$('#attribution').textContent = METHODOLOGY.attribution;
+
+/* ============================ stack view ============================ */
+$('#layersList').innerHTML = FULL_STACK_LAYERS.map(l=>`
+  <div class="step-row">
+    <div class="step-n">${l.n}</div>
+    <div>
+      <h4 style="margin-bottom:0.15rem; color:var(--text-primary);">${esc(l.label)} <span class="tiny" style="font-weight:400;">· ${esc(l.role)}</span></h4>
+      <p class="plain" style="margin:0 0 0.15rem;">${esc(l.plain)}</p>
+      <p class="tiny" style="margin:0;">${esc(l.detail)}</p>
+    </div>
+  </div>`).join('');
+$('#feasCards').innerHTML = Object.keys(FEASIBILITY).map(k=>{
+  const F = FEASIBILITY[k];
+  const n = Object.values(CELLS).reduce((a,c)=>a+c.indicators.filter(i=>i.feasibility===k).length,0);
+  return `<div class="card quiet" style="margin:0;">
+    <span class="feas-chip feas-${k}">${esc(F.label)}</span>
+    <p class="plain" style="margin:0.5rem 0 0.4rem;">${esc(F.plain)}</p>
+    <p class="tiny" style="margin:0 0 0.4rem;">${esc(F.detail)}</p>
+    <p class="tiny" style="margin:0;"><strong style="font-weight:500;">${n} of ${Object.values(CELLS).reduce((a,c)=>a+c.indicators.length,0)} indicators</strong> in this matrix sit here.</p>
+  </div>`;
+}).join('');
+
+/* ============================ workshop view ============================ */
+$('#stakesRow').innerHTML = WORKSHOP.stakes.map(s=>`
+  <div class="stat"><div class="value">${esc(s.n)}</div><div class="label" style="margin:3px 0 0;">${esc(s.label)}</div><div class="sub">${esc(s.plain)}</div></div>`).join('');
+$('#whyMatters').textContent = WORKSHOP.whyItMatters;
+$('#wsSovStats').innerHTML = SOVEREIGNTY.byScale.map(s=>{
+  const sc = SCALES.find(x=>x.id===s.scale);
+  if(s.scale==='planet') return '';
+  const pct = Math.round((s.lab/s.total)*100);
+  return `<div class="stat">
+    <div class="label">${esc(sc?sc.label:s.scale)}</div>
+    <div class="value" style="color:${s.lab? 'var(--green-800)':'var(--text-muted)'};">${pct}%</div>
+    <div class="sub">${s.lab} of ${s.total} indicators the lab can measure alone</div>
+  </div>`;
+}).filter(Boolean).join('');
+$('#jumpToSources').addEventListener('click', ()=>{
+  $('#tabs button[data-view="upload"]').dispatchEvent(new Event('click',{bubbles:true}));
+  setTimeout(()=>{ const el=$('#netSourcesTable'); if(el && el.scrollIntoView) try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }, 120);
+});
+$('#wsSteps').innerHTML = WORKSHOP.steps.map(s=>`
+  <div class="step-row">
+    <div class="step-n">${s.n}</div>
+    <div>
+      <h4 style="margin-bottom:0.2rem; color:var(--text-primary);">${esc(s.title)} <span class="tiny" style="font-weight:400;">· ${s.minutes} min</span></h4>
+      <p class="plain" style="margin:0 0 0.3rem;">${esc(s.what)}</p>
+      <p class="tiny" style="margin:0 0 0.2rem;"><strong style="font-weight:500;">In the dashboard:</strong> ${esc(s.how)}</p>
+      <p class="tiny" style="margin:0 0 0.2rem;"><strong style="font-weight:500;">The rule:</strong> ${esc(s.rule)}</p>
+      <p class="tiny" style="margin:0;"><strong style="font-weight:500;">Why it helps:</strong> ${esc(s.dashboard)}</p>
+    </div>
+  </div>`).join('');
+$('#wsAfter').textContent = WORKSHOP.afterwards;
+
+/* ============================ gaps ============================ */
+$('#gapsList').innerHTML = METHODOLOGY.openGaps.map(g=>`<li class="plain" style="margin-bottom:0.5rem;">${esc(g)}</li>`).join('');
+$('#footerNote').innerHTML = esc(META.disclaimer) + '<br><br>Built from: FCI 3.0 prototype (' + esc(META.siteUrl) + ' — matrix, methodology, atlas, phase plot, operator workbench) · Vivanco, T., <em>Fab City Full Stack Metrics Framework</em> (FAB26 working paper) · Diez, Charny &amp; Kohtala (2024), <em>The Fab City Full Stack</em>. ' + esc(META.version) + '.';
+
+/* ============================ cities / phase plot ============================ */
+let selCity = 'boston';
+function buildCityChips(){
+  $('#citySelectRow').innerHTML = CITIES.map(c=>
+    `<button class="btn ${c.id===selCity?'primary':''}" data-city="${esc(c.id)}" style="border-radius:999px;">${esc(c.name)}</button>`).join('');
+  $$('#citySelectRow [data-city]').forEach(b=> b.addEventListener('click', ()=>{ selCity=b.dataset.city; buildCityChips(); renderCity(); }));
+}
+function renderPhase(){
+  const W=660,H=430,pad=54;
+  const X = v => pad + v*(W-2*pad), Y = v => (H-pad) - v*(H-2*pad);
+  let e = '';
+  e += `<rect x="${pad}" y="${pad}" width="${W-2*pad}" height="${(H-2*pad)/2}" fill="rgba(88,140,60,0.05)"/>`;
+  e += `<line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="var(--border-strong)"/>`;
+  e += `<line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="var(--border-strong)"/>`;
+  e += `<line x1="${X(0)}" y1="${Y(1)}" x2="${X(1)}" y2="${Y(0)}" stroke="var(--border)" stroke-dasharray="4,4"/>`;
+  e += `<text x="${W/2}" y="${H-16}" text-anchor="middle" font-size="12" fill="var(--text-secondary)">PITO — buys far, wastes near →</text>`;
+  e += `<text x="18" y="${H/2}" text-anchor="middle" font-size="12" fill="var(--text-secondary)" transform="rotate(-90 18 ${H/2})">DIDO — senses, shares, makes locally →</text>`;
+  e += `<text x="${pad+10}" y="${pad+18}" font-size="11" fill="var(--green-800)">target regime</text>`;
+  e += `<text x="${W-pad-8}" y="${H-pad-10}" text-anchor="end" font-size="11" fill="var(--text-muted)">linear-extractive baseline</text>`;
+  CITIES.forEach(c=>{
+    const d = c.dido===null ? 0.06 : c.dido, cx = X(c.pito), cy = Y(d);
+    const sel = c.id===selCity, recon = c.status==='reconstructed';
+    const fill = recon ? 'var(--text-muted)' : (sel ? 'var(--blue-600)' : 'var(--green-600)');
+    e += `<circle cx="${cx}" cy="${cy}" r="${sel?9:6.5}" fill="${fill}" opacity="${recon?0.5:0.9}" stroke="var(--surface-2)" stroke-width="2" style="cursor:pointer;" data-city="${c.id}"/>`;
+    e += `<text x="${cx}" y="${cy-14}" text-anchor="middle" font-size="11" fill="var(--text-primary)" font-weight="${sel?'500':'400'}" style="pointer-events:none;">${esc(c.name)}</text>`;
+    if(recon) e += `<text x="${cx}" y="${cy+20}" text-anchor="middle" font-size="9" fill="var(--text-muted)" style="pointer-events:none;">Gen ${c.generation}</text>`;
+  });
+  $('#phasePlot').innerHTML = e;
+  $$('#phasePlot circle[data-city]').forEach(n=> n.addEventListener('click', ()=>{ selCity=n.dataset.city; buildCityChips(); renderCity(); }));
+}
+function renderCity(){
+  const c = CITIES.find(x=>x.id===selCity);
+  const badge = c.status==='reconstructed' ? '<span class="badge badge-placeholder">reconstructed point</span>'
+    : c.status==='partial' ? '<span class="badge badge-partial">partial — some real data</span>'
+    : '<span class="badge badge-mock">mock — sample values</span>';
+  $('#cityDetailCard').innerHTML = `
+    <h3>${esc(c.name)} ${c.workshopHome?'<span class="badge badge-gen12">workshop host</span>':''}</h3>
+    <div>${badge}</div>
+    <p class="tiny">${esc([c.country,c.coords,c.bioregion].filter(Boolean).join(' · '))}</p>
+    <div class="grid-4" style="margin:0.8rem 0;">
+      <div class="stat"><div class="label">PITO</div><div class="value">${c.pito!=null?c.pito.toFixed(2):'—'}</div></div>
+      <div class="stat"><div class="label">DIDO</div><div class="value">${c.dido!=null?c.dido.toFixed(2):'—'}</div></div>
+      <div class="stat"><div class="label">ρ</div><div class="value">${c.rho!=null?c.rho.toFixed(2):'—'}</div><div class="sub">${c.rho==null?'protocol pending':'implicit'}</div></div>
+      <div class="stat"><div class="label">FCI</div><div class="value">${c.fci!=null?c.fci.toFixed(2):'—'}</div><div class="sub">${c.fci!=null?'single-cell':'needs ρ'}</div></div>
+    </div>
+    <p class="plain" style="margin:0;">${esc(c.note)}</p>`;
+  renderPhase();
+}
+
+/* ============================ cards view ============================ */
+function cardRows(){
+  const cards = LS.cards();
+  return Object.keys(cards).map(k=>Object.assign({key:k, cell:cellLabel(k)}, cards[k]))
+    .sort((a,b)=> (a.table||'').localeCompare(b.table||'') || a.cell.localeCompare(b.cell));
+}
+function buildCardTable(){
+  const rows = cardRows(), t = $('#wsCardTable');
+  if(!rows.length){ t.innerHTML = '<tr><td class="plain" style="padding:1rem;">No cards dotted yet. Turn on Workshop mode in the matrix and start dotting.</td></tr>'; return; }
+  t.innerHTML = '<tr><th>Table</th><th>City</th><th>Cell</th><th>Light</th><th>Source</th><th>Name</th><th>First step</th><th>Date</th></tr>' +
+    rows.map(r=>`<tr>
+      <td>${esc(r.table)}</td><td>${esc(r.city)}</td><td>${esc(r.cell)}</td>
+      <td><span class="chip-dot" style="background:${(WS_LIGHTS[r.light]||{}).color||'var(--text-muted)'};"></span>${esc(r.light)}</td>
+      <td class="tiny">${esc(r.source)}</td><td>${esc(r.name)}</td><td class="tiny">${esc(r.firstStep)}</td><td class="tiny">${esc(r.date)}</td>
+    </tr>`).join('');
+}
+$('#wsCopyBtn').addEventListener('click', async ()=>{
+  const rows = cardRows(), st = $('#wsCopyStatus');
+  if(!rows.length){ st.textContent='Nothing to copy yet.'; st.className='status-line err'; return; }
+  const txt = rows.map(r=>`${r.table} (${r.city}) — ${r.cell} — ${r.light} — source: ${r.source||'—'} — ${r.name||'—'}, ${r.date} — first step: ${r.firstStep||'—'}`).join('\n');
+  try{ await navigator.clipboard.writeText(txt); st.textContent='Copied '+rows.length+' card(s).'; st.className='status-line ok'; }
+  catch(e){ st.textContent='Could not copy automatically — select the table and copy manually.'; st.className='status-line err'; }
+});
+$('#wsCsvBtn').addEventListener('click', ()=>{
+  const rows = cardRows();
+  if(!rows.length){ $('#wsCopyStatus').textContent='Nothing to export yet.'; $('#wsCopyStatus').className='status-line err'; return; }
+  downloadCsv('ws3-cards.csv', [['table','city','cell','light','source','name','first_step','date'],
+    ...rows.map(r=>[r.table,r.city,r.cell,r.light,r.source,r.name,r.firstStep,r.date])]);
+  $('#wsCopyStatus').textContent='Exported '+rows.length+' card(s).'; $('#wsCopyStatus').className='status-line ok';
+});
+$('#wsClearAllBtn').addEventListener('click', ()=>{
+  if(confirm('Clear every dotted card on this device? This cannot be undone.')){
+    localStorage.removeItem('fci_ws_cards'); buildCardTable(); buildMatrix();
+  }
+});
+
+/* ============================ team data loader ============================ */
+/* Minimal RFC4180-ish CSV parser: handles quoted fields, embedded commas and
+   newlines, and doubled quotes. Kept dependency-free on purpose — this file
+   must work opened directly from disk with no build step. */
+function parseCsv(text){
+  const rows = []; let row = [], field = '', q = false;
+  text = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  for(let i=0; i<text.length; i++){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i+1] === '"'){ field += '"'; i++; } else q = false; }
+      else field += c;
+    } else {
+      if(c === '"') q = true;
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(f => f.trim() !== ''));
+}
+
+function findIndicator(cellKey, name){
+  const c = CELLS[cellKey]; if(!c) return -1;
+  const n = String(name||'').trim().toLowerCase();
+  let ix = c.indicators.findIndex(i => i.name.toLowerCase() === n);
+  if(ix === -1) ix = c.indicators.findIndex(i => i.name.toLowerCase().startsWith(n.slice(0,18)));
+  return ix;
+}
+
+/* Turn CSV rows into readings. Returns a per-row report so nothing fails silently. */
+function ingestCsv(text, originLabel){
+  const rows = parseCsv(text);
+  if(!rows.length) return { report:[], applied:0 };
+  const hdr = rows[0].map(h => h.trim().toLowerCase());
+  const col = n => hdr.indexOf(n);
+  const need = ['cell','indicator','value','unit','observation_date','source'];
+  const missing = need.filter(n => col(n) === -1);
+  if(missing.length){
+    return { report:[{ row:'header', status:'rejected', why:'Missing required column(s): ' + missing.join(', ') }], applied:0 };
+  }
+  const report = []; let applied = 0;
+  for(let r=1; r<rows.length; r++){
+    const get = n => { const i = col(n); return i === -1 ? '' : String(rows[r][i]||'').trim(); };
+    const cellKey = get('cell'), indName = get('indicator'), raw = get('value');
+    const unit = get('unit'), date = get('observation_date'), src = get('source');
+    const label = (cellKey||'?') + ' · ' + (indName||'?');
+
+    if(!CELLS[cellKey]){ report.push({ row:r, label, status:'rejected', why:'Unknown cell key. Use pillar:scale, e.g. environmental:community' }); continue; }
+    const ix = findIndicator(cellKey, indName);
+    if(ix === -1){ report.push({ row:r, label, status:'rejected', why:'Indicator not defined in that cell — check spelling against the cell panel' }); continue; }
+    const ind = CELLS[cellKey].indicators[ix];
+    if(!date || !src){ report.push({ row:r, label, status:'rejected', why:'Observation date and source are both required — a value without them is not auditable' }); continue; }
+    const v = parseFloat(raw);
+    if(isNaN(v)){ report.push({ row:r, label, status:'rejected', why:'Value is not a number' }); continue; }
+    if(unit && ind.unit && unit.toLowerCase().replace(/\s/g,'') !== ind.unit.toLowerCase().replace(/\s/g,'')){
+      report.push({ row:r, label, status:'warning', why:'Unit "'+unit+'" differs from the expected "'+ind.unit+'" — loaded, but check before trusting' });
+    }
+    const lo = parseFloat(get('scale_min')), hi = parseFloat(get('scale_max'));
+    let score;
+    if(!isNaN(lo) && !isNaN(hi) && hi !== lo){
+      score = normalise(v, lo, hi, ind.direction);
+    } else {
+      report.push({ row:r, label, status:'rejected', why:'Needs scale_min and scale_max so the raw value can be normalised — see the schema' });
+      continue;
+    }
+    LS.setRead(cellKey, {
+      kind:'static', score, value:v, unit:unit||ind.unit, indIx:ix, min:lo, max:hi,
+      dir:ind.direction, obsDate:date, source:src,
+      by:get('team') || get('name') || originLabel, note:get('notes'),
+      origin:originLabel, savedAt:new Date().toISOString().slice(0,10)
+    });
+    applied++;
+    report.push({ row:r, label, status:'loaded', why:'raw '+v+' → reading '+score.toFixed(2) });
+  }
+  return { report, applied };
+}
+
+function renderLoadReport(report){
+  const card = $('#loadReportCard'), t = $('#loadReport');
+  if(!report.length){ card.style.display='none'; return; }
+  card.style.display = 'block';
+  const colour = s => s==='loaded' ? 'var(--green-800)' : s==='warning' ? 'var(--amber-800)' : 'var(--text-danger)';
+  t.innerHTML = '<tr><th>Row</th><th>Cell · indicator</th><th>Status</th><th>Detail</th></tr>' +
+    report.map(r=>`<tr>
+      <td class="tiny">${esc(r.row)}</td>
+      <td class="tiny">${esc(r.label||'')}</td>
+      <td><strong style="font-weight:500; color:${colour(r.status)};">${esc(r.status)}</strong></td>
+      <td class="tiny">${esc(r.why)}</td>
+    </tr>`).join('');
+}
+
+$('#teamFile') && $('#teamFile').addEventListener('change', ev=>{
+  const f = ev.target.files && ev.target.files[0]; if(!f) return;
+  const st = $('#fileStatus');
+  const rd = new FileReader();
+  rd.onload = () => {
+    const { report, applied } = ingestCsv(String(rd.result), f.name);
+    renderLoadReport(report);
+    st.textContent = applied + ' reading(s) loaded from ' + f.name + (report.length>applied ? ' — ' + (report.length-applied) + ' row(s) need attention, see below.' : '.');
+    st.className = 'status-line ' + (applied ? 'ok' : 'err');
+    buildMatrix();
+  };
+  rd.readAsText(f);
+});
+
+$('#loadRepoBtn') && $('#loadRepoBtn').addEventListener('click', async ()=>{
+  const st = $('#repoStatus');
+  st.textContent = 'Looking for data/submissions/index.json…'; st.className = 'status-line';
+  try{
+    const res = await fetch('data/submissions/index.json', {cache:'no-store'});
+    if(!res.ok) throw new Error('no manifest');
+    const manifest = await res.json();
+    const files = manifest.submissions || [];
+    if(!files.length){ st.textContent = 'Manifest found, but no submissions listed yet.'; st.className='status-line'; return; }
+    let all = [], total = 0;
+    for(const entry of files){
+      const path = 'data/submissions/' + entry.file;
+      try{
+        const r2 = await fetch(path, {cache:'no-store'});
+        if(!r2.ok){ all.push({row:'—', label:entry.file, status:'rejected', why:'File listed in manifest but not found'}); continue; }
+        const { report, applied } = ingestCsv(await r2.text(), entry.team || entry.file);
+        total += applied; all = all.concat(report.map(x=>Object.assign({}, x, {label:(entry.team?entry.team+' · ':'')+(x.label||entry.file)})));
+      }catch(e){ all.push({row:'—', label:entry.file, status:'rejected', why:String(e.message||e)}); }
+    }
+    renderLoadReport(all);
+    st.textContent = total + ' reading(s) loaded from ' + files.length + ' submission file(s).';
+    st.className = 'status-line ' + (total ? 'ok' : 'err');
+    buildMatrix();
+  }catch(e){
+    st.textContent = 'Could not read the repo submissions. This needs the page served over http — open it via GitHub Pages, or run "python3 -m http.server" in the repo folder. Use the file picker on the right meanwhile.';
+    st.className = 'status-line err';
+  }
+});
+
+$('#clearLoadedBtn') && $('#clearLoadedBtn').addEventListener('click', ()=>{
+  let n = 0;
+  cellKeys().forEach(k=>{ const r = LS.read(k); if(r && r.origin){ LS.delRead(k); n++; } });
+  renderLoadReport([]);
+  $('#repoStatus').textContent = 'Cleared ' + n + ' loaded reading(s). Readings you entered by hand were left alone.';
+  $('#repoStatus').className = 'status-line ok';
+  buildMatrix();
+});
+
+$('#submitSteps') && ($('#submitSteps').innerHTML = [
+  { n:1, h:'Fill the template', p:'Start from <code>data/template.csv</code>. One row per observation. Raw values only — never pre-computed scores.' },
+  { n:2, h:'Name your file', p:'<code>data/submissions/&lt;city&gt;-&lt;team&gt;.csv</code>, for example <code>boston-table4.csv</code>. Lower case, no spaces.' },
+  { n:3, h:'Add yourself to the manifest', p:'Add one entry to <code>data/submissions/index.json</code> with your file name, team and city, so the dashboard knows to read it.' },
+  { n:4, h:'Validate before you commit', p:'Run <code>python3 scripts/validate_submission.py data/submissions/your-file.csv</code>. It checks the same rules the dashboard does, and tells you exactly which row is wrong.' },
+  { n:5, h:'Open a pull request', p:'Commit on a branch and open a PR. Your readings appear in the matrix once it is merged and the page reloads.' }
+].map(s=>`<div class="step-row"><div class="step-n">${s.n}</div><div><h4 style="margin-bottom:0.15rem; color:var(--text-primary);">${s.h}</h4><p class="tiny" style="margin:0;">${s.p}</p></div></div>`).join(''));
+
+/* ============================ boot ============================ */
+buildMatrix();
+buildCityChips();
+renderCity();
+buildCardTable();
+</script>
+</body>
+</html>

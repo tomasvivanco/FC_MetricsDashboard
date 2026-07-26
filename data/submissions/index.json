@@ -1,0 +1,15 @@
+{
+  "_comment": "Manifest of workshop team submissions. Add one entry per CSV file you place in this folder, then open a pull request. The dashboard reads this file to know what to load.",
+  "_howToAdd": "Copy the example object, set file/team/city/date, and delete nothing else. Validate with: python3 scripts/validate_submission.py data/submissions/<your-file>.csv",
+  "updated": "2026-07-26",
+  "submissions": [
+    {
+      "file": "example-boston-table4.csv",
+      "team": "Table 4 — example",
+      "city": "Boston",
+      "workshop": "WS3 · FAB26",
+      "submitted": "2026-07-26",
+      "note": "Worked example so the loader has something to read on a fresh clone. Delete or ignore once real submissions arrive."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node (none required, but in case tooling is added)
+node_modules/
+
+# Local scratch — keep submissions in data/submissions/ instead
+scratch/
+*.local.csv

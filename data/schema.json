@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fab City Index 3.0 — submission row",
+  "description": "One row per observation. Raw values only; the dashboard normalises.",
+  "type": "object",
+  "required": [
+    "cell",
+    "indicator",
+    "value",
+    "unit",
+    "observation_date",
+    "source",
+    "scale_min",
+    "scale_max"
+  ],
+  "properties": {
+    "cell": {
+      "type": "string",
+      "description": "Which of the twenty parts of city life this belongs to. Pillar and scale, separated by a colon.",
+      "examples": [
+        "environmental:community"
+      ]
+    },
+    "indicator": {
+      "type": "string",
+      "description": "Exactly what was counted. Use the indicator name listed in the cell.",
+      "examples": [
+        "Products repaired"
+      ]
+    },
+    "value": {
+      "type": "number",
+      "description": "The raw number as measured. Do not pre-convert it to 0–1 — the platform normalises.",
+      "examples": [
+        "143"
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "description": "The unit the number is in. Without this the value cannot be normalised or compared.",
+      "examples": [
+        "units/month"
+      ]
+    },
+    "observation_date": {
+      "type": "string",
+      "description": "When the measurement refers to (not when you typed it). ISO format, YYYY-MM-DD.",
+      "examples": [
+        "2026-06-30"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "description": "Where it came from, specific enough that somebody else could go and check.",
+      "examples": [
+        "Repair café log, Barcelona Sants"
+      ]
+    },
+    "scale_min": {
+      "type": "number",
+      "description": "The bottom of the range you are scaling against — the raw value that would count as 0. State it so your normalisation is auditable.",
+      "examples": [
+        "0"
+      ]
+    },
+    "scale_max": {
+      "type": "number",
+      "description": "The top of that range — the raw value that would count as 1. A practical ceiling, a peer benchmark, or a science-based target.",
+      "examples": [
+        "200"
+      ]
+    },
+    "team": {
+      "type": "string",
+      "description": "Who submitted this. Used to attribute the reading back to your table.",
+      "examples": [
+        "Table 4 — Boston"
+      ]
+    },
+    "method": {
+      "type": "string",
+      "description": "How it was collected. Optional, but this is what makes the number auditable a year from now.",
+      "examples": [
+        "Manual count at close of each session"
+      ]
+    },
+    "geography": {
+      "type": "string",
+      "description": "The exact area the number covers, if narrower than the cell's scale.",
+      "examples": [
+        "Sants-Montjuïc district"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "description": "Your own honest read: high, medium, or low. Low-confidence rows go to review rather than committing.",
+      "examples": [
+        "high"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Anything a reader would need to know to not misread the number.",
+      "examples": [
+        "Two sessions cancelled in June; undercount likely"
+      ]
+    }
+  },
+  "$defs": {
+    "validCellKeys": [
+      "environmental:community",
+      "environmental:city",
+      "environmental:region",
+      "environmental:bioregion",
+      "environmental:planet",
+      "social:community",
+      "social:city",
+      "social:region",
+      "social:bioregion",
+      "social:planet",
+      "economic:community",
+      "economic:city",
+      "economic:region",
+      "economic:bioregion",
+      "economic:planet",
+      "governance:community",
+      "governance:city",
+      "governance:region",
+      "governance:bioregion",
+      "governance:planet"
+    ]
+  }
+}
