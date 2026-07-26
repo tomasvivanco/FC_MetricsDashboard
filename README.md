@@ -1,8 +1,13 @@
 # Fab City Index 3.0 — Full Stack Metrics Dashboard
 
+**▶ Live dashboard: <https://tomasvivanco.github.io/FC_MetricsDashboard/>**
+
 An interactive research instrument for measuring a city's progress toward the 2054 Fab City pledge:
 **twenty parts of city life, read as four pillars across five scales**, from a neighbourhood to a whole
 bioregion.
+
+Built for WS3 at FAB26 Boston, and for any city that wants to know which parts of its own metabolism it
+can actually see.
 
 > **Status:** working research build. Methodology v0, in review. This is not an official publication of
 > the Fab City Foundation. Weights marked *reconstructed* are a proposal for discussion, not canon.

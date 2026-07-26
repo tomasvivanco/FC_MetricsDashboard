@@ -107,8 +107,11 @@ Run it with no arguments to check every file in the folder.
 
 ## Seeing your data in the dashboard
 
-**Served over http** (GitHub Pages, or `python3 -m http.server` in the repo root) — open the
-**Team data** tab and press *Load submissions from repo*.
+**On the published site** — <https://tomasvivanco.github.io/FC_MetricsDashboard/> → **Team data** tab →
+*Load submissions from repo*. Your rows appear once the pull request is merged.
+
+**Locally over http** (`python3 -m http.server` in the repo root, then <http://localhost:8000>) — same
+tab, same button, reads your working copy.
 
 **Opened as a local file** — browsers block reading neighbouring files, so use the file picker in the same
 tab. It parses in your browser; nothing is uploaded anywhere.
