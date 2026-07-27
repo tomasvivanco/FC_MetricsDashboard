@@ -310,6 +310,10 @@ pipeline is built and tested; it needs contact with reality.
 **6. Implement the sovereignty gate** before any real community data is published. This is a
 prerequisite, not an enhancement.
 
+**Full gap analysis:** [`context/07-professionalisation-roadmap.md`](context/07-professionalisation-roadmap.md)
+lists every gap between this build and a production-grade instrument — evidence, engineering, interface,
+communication and governance — prioritised, with the capability that handles each.
+
 ### Two decisions waiting on the Foundation
 
 **Which domain is canonical.** The workshop deck points to `index.fab.city`; this build was developed

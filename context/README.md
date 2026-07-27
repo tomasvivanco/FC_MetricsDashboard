@@ -16,6 +16,7 @@ for the person who inherits this repository six months from now with no other br
 | 4 | [`04-sovereignty-audit.md`](04-sovereignty-audit.md) | Who can actually produce each number — and the nine network-own sources | You are working on data ingestion or the workshop. |
 | 5 | [`05-data-model.md`](05-data-model.md) | Every cell, every indicator, unit, direction, normalisation | You are writing code against `assets/data.js`. |
 | 6 | [`06-workshop-ws3.md`](06-workshop-ws3.md) | The workshop and the dashboard's role in each of its three moves | You are facilitating or adapting the workshop. |
+| 7 | [`07-professionalisation-roadmap.md`](07-professionalisation-roadmap.md) | Every gap between this build and a production-grade instrument, prioritised, with the capability that handles each | You are deciding what to work on next. |
 
 ## The three-minute version
 
