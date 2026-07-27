@@ -203,6 +203,9 @@ ul.plainlist li{margin-bottom:5px; font-size:13.5px; color:var(--text-secondary)
   <h1>Measuring the Fab City</h1>
   <p class="lede">Twenty parts of a city's life, read as four pillars across five scales — from a neighbourhood to a whole bioregion. Each cell asks one question, names the data that would answer it, and shows honestly whether that data is real yet.</p>
   <div class="meta-row" id="metaRow"></div>
+  <div id="storageWarn" style="display:none; margin-top:0.9rem; background:var(--bg-warning); border:0.5px solid var(--border-warning); color:var(--text-warning); border-radius:var(--radius); padding:9px 12px; font-size:13px;">
+    This browser is blocking local storage, so readings and workshop cards will be kept only until you reload. Everything else works normally. To keep your work between sessions, open the dashboard over a web address rather than as a file — or export your cards before closing.
+  </div>
 </header>
 
 <nav class="tabs" id="tabs">
@@ -517,16 +520,49 @@ const kaosBg   = (s,a) => { const c=kaos(s); return `rgba(${c.r},${c.g},${c.b},$
 const kaosInk  = (s)   => { const c=kaos(s); return `rgb(${Math.round(c.r*0.42)},${Math.round(c.g*0.42)},${Math.round(c.b*0.42)})`; };
 
 /* ============================ storage ============================ */
+/* Some browsers refuse localStorage on a file:// origin, and private modes can
+   throw on write. Fall back to memory so the instrument still renders and stays
+   usable for the session — it just will not persist across reloads. Never let
+   storage take the whole page down. */
+const store = (() => {
+  let backing = null;
+  let persistent = false;
+  try {
+    const probe = '__fci_probe__';
+    window.localStorage.setItem(probe, '1');
+    window.localStorage.removeItem(probe);
+    backing = window.localStorage;
+    persistent = true;
+  } catch (e) {
+    const mem = new Map();
+    backing = {
+      getItem: k => (mem.has(k) ? mem.get(k) : null),
+      setItem: (k, v) => mem.set(k, String(v)),
+      removeItem: k => mem.delete(k)
+    };
+    setTimeout(() => {
+      const el = document.getElementById('storageWarn');
+      if (el) el.style.display = 'block';
+    }, 0);
+  }
+  return {
+    get: k => { try { return backing.getItem(k); } catch (e) { return null; } },
+    set: (k, v) => { try { backing.setItem(k, v); } catch (e) {} },
+    del: k => { try { backing.removeItem(k); } catch (e) {} },
+    persistent
+  };
+})();
+
 const LS = {
-  read:   (k)   => { try{ return JSON.parse(localStorage.getItem('fci_read_'+k)||'null'); }catch(e){ return null; } },
-  setRead:(k,v) => localStorage.setItem('fci_read_'+k, JSON.stringify(v)),
-  delRead:(k)   => localStorage.removeItem('fci_read_'+k),
-  wsOn:   ()    => localStorage.getItem('fci_ws_mode')==='on',
-  setWs:  (v)   => localStorage.setItem('fci_ws_mode', v?'on':'off'),
-  setup:  ()    => { try{ return JSON.parse(localStorage.getItem('fci_ws_setup')||'{}'); }catch(e){ return {}; } },
-  setSetup:(v)  => localStorage.setItem('fci_ws_setup', JSON.stringify(v)),
-  cards:  ()    => { try{ return JSON.parse(localStorage.getItem('fci_ws_cards')||'{}'); }catch(e){ return {}; } },
-  setCards:(v)  => localStorage.setItem('fci_ws_cards', JSON.stringify(v))
+  read:   (k)   => { try{ return JSON.parse(store.get('fci_read_'+k)||'null'); }catch(e){ return null; } },
+  setRead:(k,v) => store.set('fci_read_'+k, JSON.stringify(v)),
+  delRead:(k)   => store.del('fci_read_'+k),
+  wsOn:   ()    => store.get('fci_ws_mode')==='on',
+  setWs:  (v)   => store.set('fci_ws_mode', v?'on':'off'),
+  setup:  ()    => { try{ return JSON.parse(store.get('fci_ws_setup')||'{}'); }catch(e){ return {}; } },
+  setSetup:(v)  => store.set('fci_ws_setup', JSON.stringify(v)),
+  cards:  ()    => { try{ return JSON.parse(store.get('fci_ws_cards')||'{}'); }catch(e){ return {}; } },
+  setCards:(v)  => store.set('fci_ws_cards', JSON.stringify(v))
 };
 const WS_LIMIT = 4;
 const WS_LIGHTS = {
@@ -1186,7 +1222,7 @@ $('#wsCsvBtn').addEventListener('click', ()=>{
 });
 $('#wsClearAllBtn').addEventListener('click', ()=>{
   if(confirm('Clear every dotted card on this device? This cannot be undone.')){
-    localStorage.removeItem('fci_ws_cards'); buildCardTable(); buildMatrix();
+    store.del('fci_ws_cards'); buildCardTable(); buildMatrix();
   }
 });
 
