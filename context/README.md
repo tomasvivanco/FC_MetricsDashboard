@@ -3,6 +3,9 @@
 This folder holds everything needed to pick up the project without having been in the room. It is written
 for the person who inherits this repository six months from now with no other briefing.
 
+> **Want just one document?** Read [`../HANDOVER.md`](../HANDOVER.md) instead — a self-contained synthesis
+> of everything below, built to be shared on its own. Come back here when you need the detail.
+
 ## Read in this order
 
 | # | File | What you get | Read it if… |

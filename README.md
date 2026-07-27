@@ -9,6 +9,10 @@ bioregion.
 Built for WS3 at FAB26 Boston, and for any city that wants to know which parts of its own metabolism it
 can actually see.
 
+> **New here, or taking this over?** Read **[HANDOVER.md](HANDOVER.md)** — one self-contained document
+> with everything that matters: the argument, the key finding, the design rules that must not be broken,
+> what is built, what is not, and where to take it next.
+
 > **Status:** working research build. Methodology v0, in review. This is not an official publication of
 > the Fab City Foundation. Weights marked *reconstructed* are a proposal for discussion, not canon.
 
