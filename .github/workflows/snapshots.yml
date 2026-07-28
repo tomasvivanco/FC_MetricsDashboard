@@ -1,0 +1,41 @@
+# Scheduled snapshot fetch — the pattern from context/07 (B·P1):
+# live data without a server, git history as the provenance ledger,
+# frontend stays a dependency-free static file.
+name: Fetch network snapshots
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays 06:17 UTC — weekly is honest for these sources
+  workflow_dispatch: {}     # and on demand from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  snapshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch snapshots
+        run: node scripts/fetch_snapshots.js
+        continue-on-error: true   # one source down must not block the commit of the others
+
+      - name: Smoke test still passes with new data
+        run: node scripts/smoke_test.js index.html
+
+      - name: Commit if anything changed
+        run: |
+          git config user.name  "snapshot-bot"
+          git config user.email "index@fab.city"
+          git add data/snapshots/
+          if git diff --cached --quiet; then
+            echo "No snapshot changes."
+          else
+            git commit -m "Snapshot: network sources $(date -u +%F)"
+            git push
+          fi

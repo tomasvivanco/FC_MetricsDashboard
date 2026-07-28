@@ -18,6 +18,14 @@
    The site itself states only 12 of 20 cells are meaningfully populated.
    ============================================================================ */
 
+/* Submissions bind to indicator names/units/directions. Bump the MINOR number
+   when indicators are added (old files still load); bump the MAJOR number when
+   an existing indicator's name, unit or direction changes (old files break —
+   write a migration note in data/README.md).
+   1.0 — FAB26 build · 1.1 — adds the two network-registry indicators
+   (fab lab density, community sensors reporting). */
+const SCHEMA_VERSION = "1.1";
+
 const META = {
   version: "v0.5 — model completion build",
   methodologyStatus: "Methodology v0 · beta · in review toward v1",
@@ -235,7 +243,10 @@ const CELLS = {
         source:"Municipal climate inventory" },
       { name:"Air and water quality sensing coverage", unit:"sensors / km²", direction:"dido", feasibility:"high",
         norm:"Coverage against a target density; caps at 1 once the city can resolve neighbourhood-level variation.",
-        source:"Smart Citizen / municipal sensor fleet" }
+        source:"Smart Citizen / municipal sensor fleet" },
+      { name:"Community sensors reporting", unit:"active kits / 20 km", direction:"dido", feasibility:"high",
+        norm:"Kits with a reading in the last 30 days within 20 km, scaled against a practical ceiling of 50 (proposed). Counts only kits actually reporting — the Barcelona archive audit found ~98% dormant, and counting the dormant ones flatters the indicator.",
+        source:"Smart Citizen API — network-own source, snapshot pipeline" }
     ]
   },
   "environmental:region": {
@@ -384,7 +395,10 @@ const CELLS = {
         source:"Regional trade and input-output accounts" },
       { name:"Economic complexity", unit:"ECI index", direction:"dido", feasibility:"high",
         norm:"Min-max scaled across the peer set; a proxy for the diversity of what a place knows how to make.",
-        source:"Metroverse / Harvard Growth Lab" }
+        source:"Metroverse / Harvard Growth Lab" },
+      { name:"Fab lab density in catchment", unit:"labs / 50 km catchment", direction:"dido", feasibility:"high",
+        norm:"Count of registered labs within 50 km, scaled against a practical ceiling of 25 (network peer benchmark, proposed). Distributed-production capacity the network itself can verify.",
+        source:"fablabs.io registry — network-own source, snapshot pipeline" }
     ]
   },
   "economic:region": {
@@ -676,7 +690,9 @@ const CSV_SCHEMA = [
   { col:"confidence", required:false, example:"high",
     plain:"Your own honest read: high, medium, or low. Low-confidence rows go to review rather than committing." },
   { col:"notes", required:false, example:"Two sessions cancelled in June; undercount likely",
-    plain:"Anything a reader would need to know to not misread the number." }
+    plain:"Anything a reader would need to know to not misread the number." },
+  { col:"schema_version", required:false, example:"1.1",
+    plain:"Which version of the indicator schema this file was written against (see SCHEMA_VERSION in assets/data.js). Optional, but it is what lets the pipeline warn you instead of silently misreading your file when the model evolves." }
 ];
 
 const DATA_HYGIENE = [

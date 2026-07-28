@@ -397,6 +397,30 @@ ul.plainlist li{margin-bottom:5px; font-size:13.5px; color:var(--text-secondary)
     </div>
   </div>
 
+  <div class="card">
+    <h3>Network snapshots — the sources the network already owns</h3>
+    <p class="plain" style="max-width:78ch;">A scheduled job (<code>.github/workflows/snapshots.yml</code>) fetches fablabs.io and Smart Citizen weekly and commits dated JSON into <code>data/snapshots/</code> — git history is the provenance ledger. Loading them here turns each into a <em>static</em> reading: a real value, frozen at its observation date, with its normalisation stated in the file. Needs the page served over http.</p>
+    <div class="read-row" style="max-width:480px;">
+      <label style="flex:1;">City
+        <select id="snapCity" style="margin-top:4px;"></select>
+      </label>
+      <button class="btn primary" id="loadSnapsBtn" style="flex:none;">Load network snapshots</button>
+    </div>
+    <div class="status-line" id="snapStatus"></div>
+  </div>
+
+  <div class="card">
+    <h3>Move a session between machines</h3>
+    <p class="plain" style="max-width:78ch;">Readings live in this browser only. Export everything — readings, workshop cards, your ρ estimate — as one JSON file; import it on another machine, or merge several tables' files after a workshop. Importing never deletes: existing readings are only overwritten by a newer observation of the same cell, and the report says exactly what happened.</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn primary" id="exportSession">Export session (.json)</button>
+      <label class="btn" style="display:inline-block; cursor:pointer;">Import session…
+        <input type="file" id="importSession" accept=".json" style="display:none;">
+      </label>
+    </div>
+    <div class="status-line" id="sessionStatus"></div>
+  </div>
+
   <div class="card" id="loadReportCard" style="display:none;">
     <h3>What was loaded</h3>
     <div class="matrix-scroll"><table class="simple" id="loadReport"></table></div>
@@ -1730,6 +1754,17 @@ function ingestCsv(text, originLabel){
     return { report:[{ row:'header', status:'rejected', why:'Missing required column(s): ' + missing.join(', ') }], applied:0 };
   }
   const report = []; let applied = 0;
+  const svIx = col('schema_version');
+  if(svIx !== -1 && rows.length > 1){
+    const sv = String(rows[1][svIx]||'').trim();
+    if(sv && sv !== SCHEMA_VERSION){
+      const majorTheirs = sv.split('.')[0], majorOurs = SCHEMA_VERSION.split('.')[0];
+      report.push({ row:'header', label:'schema_version', status: majorTheirs!==majorOurs ? 'rejected' : 'warning',
+        why:'File written against schema '+sv+', dashboard is at '+SCHEMA_VERSION+
+            (majorTheirs!==majorOurs ? ' — indicator names/units have changed incompatibly; re-check every row against the cell panels before loading.' : ' — minor difference, indicators were only added; loading normally.') });
+      if(majorTheirs!==majorOurs) return { report, applied:0 };
+    }
+  }
   for(let r=1; r<rows.length; r++){
     const get = n => { const i = col(n); return i === -1 ? '' : String(rows[r][i]||'').trim(); };
     const cellKey = get('cell'), indName = get('indicator'), raw = get('value');
@@ -1830,6 +1865,106 @@ $('#clearLoadedBtn') && $('#clearLoadedBtn').addEventListener('click', ()=>{
   $('#repoStatus').textContent = 'Cleared ' + n + ' loaded reading(s). Readings you entered by hand were left alone.';
   $('#repoStatus').className = 'status-line ok';
   buildMatrix(); renderBanner();
+});
+
+/* ============================ network snapshots ============================ */
+(()=>{
+  const sel = $('#snapCity'); if(!sel) return;
+  sel.innerHTML = CITIES.filter(c=>c.status!=='reconstructed')
+    .map(c=>`<option value="${esc(c.id)}" ${c.workshopHome?'selected':''}>${esc(c.name)}</option>`).join('');
+  $('#loadSnapsBtn').addEventListener('click', async ()=>{
+    const st = $('#snapStatus'), city = sel.value;
+    st.textContent = 'Reading data/snapshots/index.json…'; st.className='status-line';
+    try{
+      const res = await fetch('data/snapshots/index.json', {cache:'no-store'});
+      if(!res.ok) throw new Error('no manifest');
+      const manifest = await res.json();
+      const snaps = manifest.snapshots || [];
+      if(!snaps.length){ st.textContent='Manifest found, but no snapshots yet — run the workflow once (Actions → Fetch network snapshots).'; return; }
+      const report = []; let applied = 0;
+      for(const entry of snaps){
+        try{
+          const s = await (await fetch('data/snapshots/'+entry.file, {cache:'no-store'})).json();
+          const bind = s.binds_to || {}, cellKey = bind.cell;
+          const label = (s.slug||entry.file)+' · '+(bind.indicator||'?');
+          if(!CELLS[cellKey]){ report.push({row:'—', label, status:'rejected', why:'Snapshot binds to unknown cell '+cellKey}); continue; }
+          const ix = findIndicator(cellKey, bind.indicator);
+          if(ix===-1){ report.push({row:'—', label, status:'rejected', why:'Indicator not found in that cell — snapshot and data model have drifted'}); continue; }
+          const v = (s.values||[]).find(x=>x.city===city);
+          if(!v){ report.push({row:'—', label, status:'rejected', why:'No value for '+city+' in this snapshot'}); continue; }
+          const n = s.normalisation||{};
+          const score = normalise(v.value, n.scale_min, n.scale_max, n.direction||CELLS[cellKey].indicators[ix].direction);
+          if(score===null){ report.push({row:'—', label, status:'rejected', why:'Snapshot missing a usable scale_min/scale_max'}); continue; }
+          LS.setRead(cellKey, {
+            kind:'static', score, value:v.value, unit:v.unit, indIx:ix,
+            min:n.scale_min, max:n.scale_max, dir:n.direction,
+            obsDate:s.observation_date, source:s.source+' — snapshot pipeline, '+(n.note||''),
+            origin:'snapshot:'+(s.slug||entry.file), savedAt:new Date().toISOString().slice(0,10)
+          });
+          applied++;
+          report.push({row:'—', label, status:'loaded', why:'raw '+v.value+' ('+v.unit+') → reading '+score.toFixed(2)+' · observed '+s.observation_date});
+        }catch(e){ report.push({row:'—', label:entry.file, status:'rejected', why:String(e.message||e)}); }
+      }
+      renderLoadReport(report);
+      st.textContent = applied+' snapshot reading(s) loaded for '+city+'.';
+      st.className = 'status-line '+(applied?'ok':'err');
+      buildMatrix(); renderBanner();
+    }catch(e){
+      st.textContent = 'Could not read snapshots — the page must be served over http, and the workflow must have run at least once.';
+      st.className = 'status-line err';
+    }
+  });
+})();
+
+/* ============================ session export / import ============================ */
+$('#exportSession') && $('#exportSession').addEventListener('click', ()=>{
+  const readings = {};
+  cellKeys().forEach(k=>{ const r = LS.read(k); if(r) readings[k]=r; });
+  const payload = {
+    format:'fci-session', schema_version:SCHEMA_VERSION, dashboard_version:META.version,
+    exported_at:new Date().toISOString(),
+    readings, cards:LS.cards(), ws_setup:LS.setup(), rho_estimate:RHOEST.get()
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fci-session-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const st = $('#sessionStatus');
+  st.textContent = 'Exported '+Object.keys(readings).length+' reading(s) and '+Object.keys(LS.cards()).length+' card(s).';
+  st.className = 'status-line ok';
+});
+
+$('#importSession') && $('#importSession').addEventListener('change', ev=>{
+  const f = ev.target.files && ev.target.files[0]; if(!f) return;
+  const st = $('#sessionStatus');
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    try{
+      const p = JSON.parse(String(rd.result));
+      if(p.format!=='fci-session') throw new Error('not an fci-session file');
+      let added=0, updated=0, kept=0, badRows=0;
+      Object.keys(p.readings||{}).forEach(k=>{
+        const inc = p.readings[k];
+        if(!CELLS[k] || !inc || typeof inc.score!=='number' || !READING_KINDS[inc.kind]){ badRows++; return; }
+        inc.score = Math.max(0, Math.min(1, inc.score));
+        const cur = LS.read(k);
+        if(!cur){ LS.setRead(k, inc); added++; return; }
+        const dOf = r => Date.parse(r.obsDate||r.savedAt||0)||0;
+        if(dOf(inc) >= dOf(cur)){ LS.setRead(k, inc); updated++; } else kept++;
+      });
+      const cards = LS.cards();
+      let cardsIn = 0;
+      Object.keys(p.cards||{}).forEach(k=>{ if(CELLS[k] && p.cards[k] && p.cards[k].light){ if(!cards[k]) cardsIn++; cards[k]=p.cards[k]; } });
+      LS.setCards(cards);
+      if(typeof p.rho_estimate==='number' && RHOEST.get()==null) RHOEST.set(p.rho_estimate);
+      st.textContent = 'Imported: '+added+' new, '+updated+' updated (newer observation), '+kept+' kept (yours was newer), '+cardsIn+' card(s) merged'+(badRows?', '+badRows+' invalid entr(y/ies) skipped':'')+'.'+(p.schema_version && p.schema_version!==SCHEMA_VERSION ? ' File schema '+p.schema_version+' vs '+SCHEMA_VERSION+' here — check indicator bindings.' : '');
+      st.className='status-line ok';
+      buildMatrix(); renderBanner(); buildCardTable();
+    }catch(e){ st.textContent='Could not import: '+(e.message||e); st.className='status-line err'; }
+    ev.target.value='';
+  };
+  rd.readAsText(f);
 });
 
 $('#submitSteps') && ($('#submitSteps').innerHTML = [

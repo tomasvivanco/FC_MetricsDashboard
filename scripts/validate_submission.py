@@ -30,6 +30,13 @@ if not sys.stdout.isatty():
     C_RESET = C_RED = C_YEL = C_GRN = C_DIM = ""
 
 
+def load_schema_version():
+    """Read SCHEMA_VERSION from assets/data.js — same source the dashboard uses."""
+    with open(DATA_JS, encoding="utf-8") as fh:
+        m = re.search(r'const SCHEMA_VERSION\s*=\s*"([^"]+)"', fh.read())
+    return m.group(1) if m else None
+
+
 def load_cells():
     """Pull cell keys, indicator names, units and directions straight out of
     assets/data.js so this script can never drift from the dashboard."""
@@ -76,6 +83,20 @@ def validate(path, cells):
     if missing:
         errors.append(("header", "Missing required column(s): " + ", ".join(missing)))
         return errors, warnings, ok
+
+    ours = load_schema_version()
+    if ours and "schema_version" in header:
+        theirs = (rows[0].get("schema_version") or "").strip()
+        if theirs and theirs != ours:
+            if theirs.split(".")[0] != ours.split(".")[0]:
+                errors.append(("header", f"schema_version {theirs} is a MAJOR version behind the dashboard's {ours} — "
+                                         "indicator names/units have changed incompatibly. Re-check every row."))
+            else:
+                warnings.append(("header", f"schema_version {theirs} vs dashboard {ours} — minor difference "
+                                           "(indicators were only added); the file will load."))
+    elif ours and "schema_version" not in header:
+        warnings.append(("header", f"No schema_version column. Add one (current: {ours}) so future model "
+                                   "changes warn you instead of silently misreading this file."))
 
     seen = set()
     for i, raw in enumerate(rows, start=2):     # start=2: row 1 is the header

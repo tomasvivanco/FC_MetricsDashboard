@@ -1,0 +1,54 @@
+id: 2026-07-28_rho-symbol-canonisation
+title: "Response term symbol: canonise ρ, retire κ from forward-facing text"
+date: 2026-07-28
+status: proposed          # becomes locked only on PLANETAI-side ack
+scope: network
+supersedes: []
+superseded_by: null
+authors:
+  - tomas.vivanco
+attribution:
+  - kind: human
+    name: Tomas Vivanco
+    role: surfaced the drift while aligning FC_MetricsDashboard with canon; drafted proposal
+  - kind: ai-subagent
+    model: claude-fable
+    surface: cowork
+    role: cross-read all canonical surfaces, located the two-symbol drift
+prior_state: |
+  The response/coupling term of the Fab City Index has two symbols in
+  circulation. The locked decision record 2026-04-28_pito-dido-narrative-layer
+  writes FCI_t = DIDO_t · (1 − PITO_t) · κ_t, naming κ the coupling
+  coefficient operationalising H₀-A. The public surfaces — the FCI 3.0
+  exhibition console (July 2026) and FC_MetricsDashboard — write ρ
+  ("action latency"). Same term, two symbols, one of them in a locked record.
+change: |
+  Canonise ρ as the public symbol of the response term everywhere:
+  papers, dashboards, consoles, decks. κ is retired from forward-facing
+  text; where the 2026-04-28 record is cited verbatim, a bracketed note
+  reads "κ, now written ρ". The term's definition is unchanged: action
+  latency — the speed at which an observation produces a fitted,
+  human-approved response — measured against PLANETAI's H₀-A five-stage
+  timestamp protocol (detect → decide → fabricate → deploy → measure).
+reasoning: |
+  The drift is cosmetic today and expensive later: the first external
+  reviewer to read the decision record next to the console will ask
+  whether κ and ρ are two different terms, and every future surface
+  doubles the chance of a third symbol. ρ wins on usage: both current
+  public surfaces already use it, and it reads naturally as a rate-like
+  coefficient. This is exactly the class of drift the pillar-correction
+  and scales-correction records were written to prevent.
+artifacts_changed:
+  - FC_MetricsDashboard/assets/data.js (symbolNote on the ρ term)
+  - FC_MetricsDashboard/index.html (formula view renders the note)
+review:
+  required_acks: [tomas.diez]
+  acks_received: []
+  closes: 2026-08-31
+  note: |
+    On ack, this becomes a superseding note on
+    2026-04-28_pito-dido-narrative-layer and should be registered in the
+    PLANETAI canonical-documents Airtable.
+related_decisions:
+  - 2026-04-28_pito-dido-narrative-layer
+discussion_url: null

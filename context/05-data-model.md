@@ -1,4 +1,4 @@
-written: 606 lines
+written: 611 lines
 reference
 
 > **Generated from `assets/data.js`.** Do not edit by hand — regenerate with
@@ -123,12 +123,13 @@ regenerative (green)** and 0 always extractive (red). A `pito`-direction indicat
 | `geography` | no | `Sants-Montjuïc district` | The exact area the number covers, if narrower than the cell's scale. |
 | `confidence` | no | `high` | Your own honest read: high, medium, or low. Low-confidence rows go to review rather than committing. |
 | `notes` | no | `Two sessions cancelled in June; undercount likely` | Anything a reader would need to know to not misread the number. |
+| `schema_version` | no | `1.1` | Which version of the indicator schema this file was written against (see SCHEMA_VERSION in assets/data.js). Optional, but it is what lets the pipeline warn you instead of silently misreading your file when the model evolves. |
 
 ---
 
 ## The twenty cells
 
-**20 cells · 51 indicators.** Feeder split: 4 lab, 7 mixed, 5 institutional, 4 fixed. Feasibility split: 16 high, 23 medium, 12 low.
+**20 cells · 53 indicators.** Feeder split: 4 lab, 7 mixed, 5 institutional, 4 fixed. Feasibility split: 18 high, 23 medium, 12 low.
 
 ### Environmental
 
@@ -178,10 +179,12 @@ Reconstructed from [B]'s environmental pillar (material flows, energy/climate, e
 | Domestic material consumption | `tonnes / capita / yr` | higher = worse | Medium | Urban material flow accounting (Eurostat-compatible MFA) |
 | Territorial GHG emissions | `tCO₂e / capita / yr` | higher = worse | Medium | Municipal climate inventory |
 | Air and water quality sensing coverage | `sensors / km²` | higher = better | High | Smart Citizen / municipal sensor fleet |
+| Community sensors reporting | `active kits / 20 km` | higher = better | High | Smart Citizen API — network-own source, snapshot pipeline |
 
 - **Domestic material consumption** → Inverted and min-max scaled against a bioregional sustainable-throughput benchmark; higher consumption drives the reading toward 0.
 - **Territorial GHG emissions** → Inverted, scaled against the city's own science-based trajectory for the year.
 - **Air and water quality sensing coverage** → Coverage against a target density; caps at 1 once the city can resolve neighbourhood-level variation.
+- **Community sensors reporting** → Kits with a reading in the last 30 days within 20 km, scaled against a practical ceiling of 50 (proposed). Counts only kits actually reporting — the Barcelona archive audit found ~98% dormant, and counting the dormant ones flatters the indicator.
 
 #### `environmental:region` — Environmental × Region
 
@@ -413,10 +416,12 @@ THE GENERATION 1+2 CELL. This single cell is what Utopies measured for ~600 Fren
 | Local production self-sufficiency | `% of consumption met locally` | higher = better | Medium | NACE/COICOP economic accounts; Metroverse ECI as proxy |
 | Import dependency | `% of demand imported` | higher = worse | Medium | Regional trade and input-output accounts |
 | Economic complexity | `ECI index` | higher = better | High | Metroverse / Harvard Growth Lab |
+| Fab lab density in catchment | `labs / 50 km catchment` | higher = better | High | fablabs.io registry — network-own source, snapshot pipeline |
 
 - **Local production self-sufficiency** → Boeing's discipline: priority × self-sufficiency by consumption class. Direct percentage.
 - **Import dependency** → Inverted percentage — the mirror of the indicator above, kept separate for auditability.
 - **Economic complexity** → Min-max scaled across the peer set; a proxy for the diversity of what a place knows how to make.
+- **Fab lab density in catchment** → Count of registered labs within 50 km, scaled against a practical ceiling of 25 (network peer benchmark, proposed). Distributed-production capacity the network itself can verify.
 
 #### `economic:region` — Economic × Region
 

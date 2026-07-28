@@ -253,6 +253,18 @@ handed to a city as one file that works offline.
 - Two ingestion paths: from the repo over http, or a local file picker (works offline)
 - Row-by-row validation report — nothing fails silently
 - `validate_submission.py` mirrors the dashboard's rules exactly, so a file that passes will load
+- **Schema versioning** (`SCHEMA_VERSION` in `assets/data.js`, `schema_version` CSV column): minor
+  mismatch warns and loads, major mismatch refuses — the model can now evolve without silently
+  misreading old submissions
+- **Session export/import** — readings, cards and the ρ estimate move between machines as one JSON;
+  imports merge by observation date and never delete
+- **Snapshot pipeline** — `.github/workflows/snapshots.yml` runs `scripts/fetch_snapshots.js` weekly:
+  fablabs.io (→ Economic × City) and Smart Citizen active kits (→ Environmental × City) committed as
+  dated JSON in `data/snapshots/`, loadable per pilot city from the Team data view as `static` readings.
+  Git history of that folder is the provenance ledger. This resolves the roadmap's P1-connectors,
+  P3-persistence and P3-ledger in one move — the frontend stays a dependency-free single file
+- **Decision-record drafts** in `context/decisions/` — ρ-symbol canonisation and the canonical
+  weights.json mechanism, in the PLANETAI format, status `proposed`, ready to circulate
 
 **Context** — `context/`, 1,500+ lines plus original source documents
 

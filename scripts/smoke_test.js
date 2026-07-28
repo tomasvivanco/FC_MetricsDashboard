@@ -50,7 +50,7 @@ const confirmStub = () => false;
 const setTimeoutStub = (fn) => { try{ fn(); }catch(e){} return 0; };
 
 const src = dataJs + '\n' + m[1] + `
-;return { fitAxes, derivedFor, modelState, narrativeFor, tierStates, collectScores, MODE, SIMST, RHOEST, LS, normalise, SIM, CELLS };`;
+;return { fitAxes, derivedFor, modelState, narrativeFor, tierStates, collectScores, MODE, SIMST, RHOEST, LS, normalise, SIM, CELLS, ingestCsv, SCHEMA_VERSION };`;
 
 let api;
 try {
@@ -108,5 +108,15 @@ console.log((st2.axes && st2.basis==='measured' && st2.n===2 ? 'PASS':'FAIL') + 
 api.LS.setRead('social:city', { kind:'estimate', score: 0.9 });
 const st3 = api.modelState();
 console.log((st3.n===2 && st3.basis==='measured' ? 'PASS':'FAIL') + ': estimates excluded from measured fit basis');
+
+/* schema_version gate in ingestCsv */
+const hdr = 'cell,indicator,value,unit,observation_date,source,scale_min,scale_max,schema_version';
+const row = 'environmental:community,Products repaired,143,units / month,2026-06-30,"Repair log",0,200,';
+const major = api.ingestCsv(hdr+'\n'+row+'9.0', 'test');
+console.log((major.applied===0 && major.report.some(r=>r.status==='rejected') ? 'PASS':'FAIL') + ': major schema mismatch refuses to load');
+const minor = api.ingestCsv(hdr+'\n'+row+'1.0', 'test');
+console.log((minor.applied===1 && minor.report.some(r=>r.status==='warning') ? 'PASS':'FAIL') + ': minor schema mismatch warns but loads');
+const same = api.ingestCsv(hdr+'\n'+row+api.SCHEMA_VERSION, 'test');
+console.log((same.applied===1 && !same.report.some(r=>r.status==='warning'&&r.label==='schema_version') ? 'PASS':'FAIL') + ': matching schema loads clean');
 
 console.log('DONE');
