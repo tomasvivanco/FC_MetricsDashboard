@@ -26,6 +26,7 @@ o.push('|---|---|');
  ['FEASIBILITY','High / medium / low tiers with definitions'],
  ['CELLS','The twenty cells and their indicators — the core of the model'],
  ['METHODOLOGY','Formula, terms, Boeing recovery, aggregation, open gaps'],
+ ['SIM','Exhibition-console layer: mock archetypes, console weight table (comparison only), narrative bands'],
  ['FULL_STACK_LAYERS','The seven layers'],
  ['INGESTION_ROUTES','The four ways data enters'],
  ['CSV_SCHEMA','Submission column definitions'],

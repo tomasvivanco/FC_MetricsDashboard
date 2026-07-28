@@ -95,6 +95,44 @@ table.matrix th{font-size:12px; font-weight:500; color:var(--text-secondary); te
 .cell-w{font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted);}
 .cell-feeder{font-size:9.5px; color:var(--text-muted);}
 .gen12-flag{position:absolute; top:6px; right:7px; font-size:9px; font-weight:500; color:var(--text-primary); letter-spacing:0.03em;}
+.cell-btn.is-derived{border-style:dashed; border-color:var(--purple-600);}
+.cell-btn.is-derived::after{
+  content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+  background:repeating-linear-gradient(-45deg, rgba(83,74,183,0.07) 0 6px, transparent 6px 12px);
+}
+.kind-derived{background:var(--purple-50); color:var(--purple-800);}
+.cell-delta{font-family:var(--font-mono); font-size:9px; color:var(--purple-800);}
+
+/* ---------- FCI BANNER / MODEL / SIM ---------- */
+.fci-banner .formula-line{font-family:var(--font-mono); font-size:16px; text-align:center; margin:0.2rem 0 0.6rem;}
+.fci-banner .formula-line .t-dido{color:var(--green-800); font-weight:600;}
+.fci-banner .formula-line .t-pito{color:var(--text-danger); font-weight:600;}
+.mode-row{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:0.6rem;}
+.mode-btn{font-size:12px; font-weight:500; padding:5px 12px; border-radius:999px; border:0.5px solid var(--border-strong); background:var(--surface-1); color:var(--text-secondary); cursor:pointer; font-family:var(--font-sans);}
+.mode-btn.active{background:var(--text-primary); color:var(--surface-2); border-color:var(--text-primary);}
+.sim-badge{display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; letter-spacing:0.05em; padding:3px 10px; border-radius:4px; background:var(--bg-warning); color:var(--text-warning); border:0.5px solid var(--border-warning); text-transform:uppercase;}
+.model-badge{display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; letter-spacing:0.05em; padding:3px 10px; border-radius:4px; background:var(--purple-50); color:var(--purple-800); border:0.5px solid var(--purple-600); text-transform:uppercase;}
+.fci-scale{position:relative; height:34px; margin:0.6rem 0 0.2rem;}
+.fci-scale .bar{position:absolute; left:0; right:0; top:13px; height:8px; border-radius:4px; background:var(--surface-1); border:0.5px solid var(--border-strong);}
+.fci-scale .tick{position:absolute; top:6px; width:2px; height:22px; background:var(--text-danger);}
+.fci-scale .tick-lbl{position:absolute; top:-8px; transform:translateX(-50%); font-family:var(--font-mono); font-size:9.5px; color:var(--text-danger); white-space:nowrap;}
+.fci-scale .marker{position:absolute; top:9px; width:16px; height:16px; border-radius:50%; transform:translateX(-8px); border:2.5px solid var(--text-primary); background:var(--surface-2);}
+.fci-scale .marker.hollow{border-style:dashed; border-color:var(--text-muted);}
+.fci-scale .end-lbl{position:absolute; top:24px; font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted);}
+.fci-big{font-family:var(--font-voice); font-size:40px; font-weight:400; line-height:1;}
+.fci-big small{font-size:13px; font-family:var(--font-sans); color:var(--text-muted);}
+.narrative-line{font-family:var(--font-voice); font-size:15.5px; color:var(--text-secondary); font-style:italic; margin:0.5rem 0 0;}
+.axis-row{display:flex; align-items:center; gap:10px; margin:0.35rem 0;}
+.axis-row .axis-name{width:170px; font-size:12px; font-weight:500; flex:none;}
+.axis-row input[type=range]{flex:1; margin:0;}
+.axis-row .axis-val{font-family:var(--font-mono); font-size:15px; font-weight:500; min-width:46px; text-align:right;}
+.preset-row{display:flex; gap:6px; flex-wrap:wrap; margin-top:0.6rem;}
+.fci-strip{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-top:0.8rem;}
+@media (max-width:860px){ .fci-strip{grid-template-columns:repeat(2,minmax(0,1fr));} }
+.fci-strip .tier{background:var(--surface-1); border-radius:var(--radius); padding:8px 10px;}
+.fci-strip .tier .t-name{font-size:10.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;}
+.fci-strip .tier .t-val{font-family:var(--font-mono); font-size:18px; font-weight:500;}
+.fci-strip .tier .t-sub{font-size:10px; color:var(--text-muted); line-height:1.35;}
 
 .legend-block{margin-top:1rem; padding-top:0.85rem; border-top:0.5px solid var(--border);}
 .kaos-legend{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-secondary); flex-wrap:wrap;}
@@ -223,6 +261,9 @@ ul.plainlist li{margin-bottom:5px; font-size:13.5px; color:var(--text-secondary)
 
 <!-- ================= MATRIX ================= -->
 <section class="view active" id="view-matrix">
+
+  <div class="card fci-banner" id="fciBanner"></div>
+
   <div class="card">
     <p class="section-no">Section 01 — the instrument</p>
     <h2>Four pillars × five scales = twenty cells</h2>
@@ -403,7 +444,7 @@ ul.plainlist li{margin-bottom:5px; font-size:13.5px; color:var(--text-secondary)
   <div class="card">
     <p class="section-no">Section 05 — pilots</p>
     <h2>Where each city sits, and which way it is heading</h2>
-    <p class="plain" style="max-width:78ch;">PITO runs left to right: how much the city still buys far and wastes near. DIDO runs bottom to top: how much it can sense, share and make locally. The top-left corner is the target. Paris and Hamburg are reconstructed points from single-cell measurements, shown to locate the ceiling — not new readings.</p>
+    <p class="plain" style="max-width:78ch;">PITO runs left to right: how much the city still buys far and wastes near. DIDO runs bottom to top: how much it can sense, share and make locally. The top-left corner is the target. Paris and Hamburg are reconstructed points from single-cell measurements, shown to locate the ceiling — not new readings. The dashed red curve is every position that scores exactly the old 37/100 at ρ = 1; the purple point is this dashboard's own city — fitted from your attached evidence, or driven by the simulation sliders — with its ring sized by ρ.</p>
     <div id="citySelectRow" style="display:flex; gap:8px; flex-wrap:wrap; margin:1rem 0;"></div>
     <div style="position:relative; width:100%;"><svg id="phasePlot" viewBox="0 0 660 430" style="width:100%; height:auto;"></svg></div>
   </div>
@@ -485,9 +526,14 @@ ul.plainlist li{margin-bottom:5px; font-size:13.5px; color:var(--text-secondary)
       </div>
       <div class="card quiet">
         <h4><span class="badge badge-recon">reconstructed</span></h4>
-        <p class="plain" style="margin:0;">Proposed here from Vivanco's FAB26 working paper to fill cells the v0 table has not yet published. A working proposal for discussion — not canon, and clearly marked everywhere it appears.</p>
+        <p class="plain" style="margin:0;">Proposed here from the Full Stack Metrics Framework FAB26 working paper [Vivanco 2024] to fill cells the v0 table has not yet published. A working proposal for discussion — not canon, and clearly marked everywhere it appears.</p>
       </div>
     </div>
+  </div>
+  <div class="card">
+    <h3>Three weight tables in the wild — the canonisation gap</h3>
+    <p class="plain" style="max-width:78ch;">The FCI 3.0 site publishes a v0 table (12 cells), this dashboard carries a documented + reconstructed set, and the exhibition console ships its own full 20-cell table. They agree on <strong style="font-weight:500;" id="wtsAgreeCount"></strong> of 20 cells. Until a versioned <code>weights.json</code> becomes the single source every surface consumes, each new surface deepens the drift. The machine-readable comparison lives at <code>data/weights.json</code> in this repository.</p>
+    <div class="matrix-scroll"><table class="simple" id="weightsDiffTable"></table></div>
   </div>
   <div class="footer" id="footerNote"></div>
 </section>
@@ -571,6 +617,310 @@ const WS_LIGHTS = {
   dark:   { label:'Dark',   note:'no data at all',           score:null, color:'var(--text-muted)' }
 };
 
+/* ============================================================================
+   MODEL ENGINE — the exhibition-console projection, disciplined.
+   A city is three axes (PITO, DIDO, ρ). Each cell is their projection through
+   its weights: cell = (1−PITO)·w_pito + DIDO·w_dido. Measured cells constrain
+   a least-squares fit of the axes; the fitted axes project the unmeasured
+   cells as 'derived' values — cross-hatched, tagged, never saveable, never a
+   measurement. Simulation mode runs the same projection from sliders, with
+   everything mock and badged. Rules that do not bend:
+   — a slider never overwrites a reading;
+   — derived values render distinctly (Rule 1 extended to a fourth kind);
+   — grey-means-no-data stays available as Evidence mode.
+============================================================================ */
+const MODE = {
+  get(){ const m = store.get('fci_view_mode'); return (m==='model'||m==='sim') ? m : 'evidence'; },
+  set(v){ store.set('fci_view_mode', v); }
+};
+const SIM_DEFAULT = { pito:0.62, dido:0.55, rho:0.40, name:'CUSTOM · mock ○' };
+const SIMST = {
+  get(){ try{ return Object.assign({}, SIM_DEFAULT, JSON.parse(store.get('fci_sim')||'{}')); }catch(e){ return Object.assign({}, SIM_DEFAULT); } },
+  set(v){ store.set('fci_sim', JSON.stringify(v)); }
+};
+const RHOEST = {
+  get(){ const v = parseFloat(store.get('fci_rho_est')); return isNaN(v) ? null : Math.max(0, Math.min(1, v)); },
+  set(v){ if(v==null){ store.del('fci_rho_est'); } else { store.set('fci_rho_est', String(v)); } }
+};
+
+function modelOn(){ return !LS.wsOn() && MODE.get()!=='evidence'; }
+
+function collectScores(){
+  const measured={}, estimates={};
+  cellKeys().forEach(k=>{
+    const r = LS.read(k);
+    if(r && typeof r.score==='number'){
+      if(r.kind==='live' || r.kind==='static') measured[k]=r.score;
+      else if(r.kind==='estimate') estimates[k]=r.score;
+    }
+  });
+  return { measured, estimates };
+}
+
+/* Least-squares fit of (x = 1−PITO, y = DIDO) from a set of cell scores,
+   through each cell's own weights. Same inversion as the console. */
+function fitAxes(scores){
+  let spp=0, spd=0, sdd=0, scp=0, scd=0, n=0;
+  Object.keys(scores).forEach(k=>{
+    const c = CELLS[k]; if(!c) return;
+    const wp=c.pito, wd=c.dido, v=scores[k];
+    spp+=wp*wp; spd+=wp*wd; sdd+=wd*wd; scp+=wp*v; scd+=wd*v; n++;
+  });
+  if(n<2) return null;
+  const det = spp*sdd - spd*spd;
+  if(Math.abs(det) < 1e-9) return null;
+  let x = (scp*sdd - scd*spd)/det, y = (spp*scd - spd*scp)/det;
+  x = Math.max(0, Math.min(1, x)); y = Math.max(0, Math.min(1, y));
+  return { pito:1-x, dido:y, n };
+}
+
+function derivedFor(key, axes){
+  const c = CELLS[key];
+  return Math.max(0, Math.min(1, (1-axes.pito)*c.pito + axes.dido*c.dido));
+}
+
+/* One object the whole UI reads: which axes, from what basis, with what ρ. */
+function modelState(){
+  if(LS.wsOn()) return { axes:null, basis:'workshop', n:0, rho:null };
+  const mode = MODE.get();
+  if(mode==='sim'){
+    const s = SIMST.get();
+    return { axes:{pito:s.pito, dido:s.dido}, basis:'sim', n:20, rho:s.rho, simName:s.name };
+  }
+  if(mode==='evidence') return { axes:null, basis:'evidence', n:0, rho:RHOEST.get() };
+  const { measured, estimates } = collectScores();
+  let fit = fitAxes(measured), basis='measured', n=Object.keys(measured).length;
+  if(!fit){
+    const pool = Object.assign({}, estimates, measured);
+    fit = fitAxes(pool);
+    if(fit){ basis='estimates'; n=Object.keys(pool).length; }
+  }
+  return { axes:fit, basis: fit?basis:null, n, rho:RHOEST.get() };
+}
+
+function narrativeFor(axes, rho){
+  const band = (v,hi,lo) => v>=hi ? 'hi' : (v<=lo ? 'lo' : 'mid');
+  const p = SIM.narrative.pito[band(axes.pito, 0.6, 0.35)];
+  const d = SIM.narrative.dido[band(axes.dido, 0.6, 0.35)];
+  const r = rho==null ? SIM.narrative.rho.none : SIM.narrative.rho[band(rho, 0.6, 0.3)];
+  const s = p+' '+d+' '+r;
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
+/* Per-tier fit — the matryoshka strip. Five FCIs, one per scale, each fitted
+   from that column's own measured cells; Δ against the whole-city projection
+   is the divergence the methodology treats as a first-class indicator. */
+function tierStates(st){
+  return SCALES.map(sc=>{
+    if(st.basis==='sim'){
+      return { scale:sc, axes:st.axes, n:4, delta:0, sim:true };
+    }
+    const { measured } = collectScores();
+    const subset = {};
+    Object.keys(measured).forEach(k=>{ if(k.split(':')[1]===sc.id) subset[k]=measured[k]; });
+    const nCells = Object.keys(subset).length;
+    const fit = fitAxes(subset);
+    let delta = null;
+    if(fit && st.axes){
+      const own = fit.dido*(1-fit.pito), glob = st.axes.dido*(1-st.axes.pito);
+      delta = own - glob;
+    }
+    return { scale:sc, axes:fit, n:nCells, delta };
+  });
+}
+
+/* ============================ FCI banner ============================ */
+function renderBanner(){
+  const el = $('#fciBanner'); if(!el) return;
+  const st = modelState();
+  const mode = MODE.get();
+
+  const modeBtns = `
+    <div class="mode-row">
+      <span class="tiny" style="font-weight:500; color:var(--text-primary);">View:</span>
+      <button class="mode-btn ${mode==='evidence'?'active':''}" data-mode="evidence" title="Only attached readings. Grey means no data — and grey is fine.">Evidence</button>
+      <button class="mode-btn ${mode==='model'?'active':''}" data-mode="model" title="Measured cells stay fixed and fit the city's axes; dark cells are filled with cross-hatched model projections.">Evidence + model</button>
+      <button class="mode-btn ${mode==='sim'?'active':''}" data-mode="sim" title="The exhibition console: three sliders, twenty cells, all mock.">Simulation</button>
+      ${mode==='sim' ? `<span class="sim-badge">○ ${esc(SIM.badge)}</span>` : ''}
+      ${mode==='model' ? `<span class="model-badge">derived values are projections, not evidence</span>` : ''}
+    </div>`;
+
+  const formula = `<div class="formula-line">FCI&nbsp;=&nbsp;<span class="t-dido">DIDO</span>&nbsp;·&nbsp;(1&nbsp;−&nbsp;<span class="t-pito">PITO</span>)&nbsp;·&nbsp;ρ</div>`;
+
+  let body = '';
+
+  if(LS.wsOn()){
+    body = `<p class="plain" style="margin:0;">Workshop mode is on — the matrix shows your table's dots, and the model is off. Turn workshop mode off to use model completion or simulation.</p>`;
+    el.innerHTML = modeBtns + formula + body;
+    wireBanner();
+    return;
+  }
+
+  if(mode==='evidence'){
+    const { measured, estimates } = collectScores();
+    body = `<p class="plain" style="margin:0;">
+      ${Object.keys(measured).length} measured reading(s) and ${Object.keys(estimates).length} estimate(s) attached.
+      No number is computed in this view — a cell honestly grey is worth more than a cell confidently filled.
+      Switch to <strong style="font-weight:500;">Evidence + model</strong> to see the shape the evidence implies, or
+      <strong style="font-weight:500;">Simulation</strong> to drive the twenty cells by hand.</p>`;
+    el.innerHTML = modeBtns + formula + body;
+    wireBanner();
+    return;
+  }
+
+  const axes = st.axes;
+  if(!axes){
+    body = `<p class="plain" style="margin:0;">Not enough evidence to fit the model — it needs at least two cells with readings (and differing weights).
+      Attach readings in the matrix below, or load a team CSV. The fit uses measured readings first and falls back to estimates only if it must.</p>`;
+    el.innerHTML = modeBtns + formula + body;
+    wireBanner();
+    return;
+  }
+
+  const rho = st.rho;
+  const dd = axes.dido*(1-axes.pito);
+  const fci = rho==null ? null : dd*rho*100;
+  const bound = dd*100;
+  const pos = v => Math.max(0, Math.min(100, v))+'%';
+
+  const scale = `
+    <div class="fci-scale">
+      <div class="bar"></div>
+      <div class="tick" style="left:37%;"></div>
+      <div class="tick-lbl" style="left:37%;">37 — Paris '18 · Hamburg '24 · the ceiling</div>
+      ${fci!=null ? `<div class="marker" style="left:${pos(fci)};" title="FCI ${fci.toFixed(1)}"></div>` : ''}
+      <div class="marker hollow" style="left:${pos(bound)};" title="upper bound at ρ = 1: ${bound.toFixed(1)}"></div>
+      <div class="end-lbl" style="left:0;">0</div>
+      <div class="end-lbl" style="right:0;">100</div>
+    </div>`;
+
+  const basisLine = st.basis==='sim'
+    ? `<span class="tiny">preset: ${esc(st.simName||'custom')} — all values mock</span>`
+    : `<span class="tiny">axes fitted from ${st.n} ${st.basis==='estimates'?'estimate(s) — no measured readings yet, so this is judgement projected, not evidence':'measured reading(s)'}</span>`;
+
+  const fciBlock = `
+    <div style="display:flex; gap:1.5rem; align-items:flex-start; flex-wrap:wrap; margin-top:0.4rem;">
+      <div style="flex:0 0 auto;">
+        <div class="fci-big">${fci!=null ? fci.toFixed(1) : '—'}<small> / 100${fci==null?' · needs ρ':''}</small></div>
+        <div class="tiny" style="margin-top:2px;">
+          DIDO ${axes.dido.toFixed(2)} · (1−PITO) ${(1-axes.pito).toFixed(2)}
+          · ρ ${rho!=null ? rho.toFixed(2)+(st.basis==='sim'?' (sim)':' (estimate)') : 'not set'}
+        </div>
+        ${basisLine}
+      </div>
+      <div style="flex:1 1 340px; min-width:280px;">
+        ${scale}
+        ${rho==null && st.basis!=='sim' ? `
+        <div class="axis-row" style="margin-top:0.5rem;">
+          <span class="axis-name tiny" style="width:auto;">ρ — set an <em>estimate</em> to complete the product:</span>
+          <input type="range" min="0" max="1" step="0.01" id="rhoEst" value="${rho==null?0.3:rho}">
+          <span class="axis-val" id="rhoEstOut">—</span>
+          <button class="btn" id="rhoEstSave" style="flex:none;">Set</button>
+        </div>
+        <p class="tiny" style="margin:0.2rem 0 0;">No city has a measured ρ yet — the protocol is v0. An estimate here renders as judgement, never as measurement. The hollow marker is the ρ = 1 upper bound.</p>`
+        : (rho!=null && st.basis!=='sim' ? `<p class="tiny" style="margin:0.3rem 0 0;">ρ is an estimate you set by hand. <button class="btn" id="rhoEstClear" style="padding:2px 8px; font-size:11px;">Clear ρ</button></p>` : '')}
+      </div>
+    </div>`;
+
+  const narrative = `<p class="narrative-line">${esc(narrativeFor(axes, rho))}</p>`;
+
+  const sim = mode!=='sim' ? '' : (()=>{
+    const s = SIMST.get();
+    const slider = (id,name,val,cls) => `
+      <div class="axis-row">
+        <span class="axis-name" style="color:${cls};">${name}</span>
+        <input type="range" min="0" max="1" step="0.01" id="sim-${id}" value="${val}">
+        <span class="axis-val" id="simOut-${id}">${val.toFixed(2)}</span>
+      </div>`;
+    return `
+      <div style="margin-top:0.9rem; padding-top:0.8rem; border-top:0.5px solid var(--border);">
+        ${slider('pito','PITO — products in, trash out', s.pito, 'var(--text-danger)')}
+        ${slider('dido','DIDO — data in, data out', s.dido, 'var(--green-800)')}
+        ${slider('rho','ρ — action latency', s.rho, 'var(--text-primary)')}
+        <div class="preset-row">
+          ${SIM.archetypes.map(a=>`<button class="btn" data-preset="${a.id}" title="${esc(a.label)}">${esc(a.name)}</button>`).join('')}
+          <button class="btn" data-preset="__reset">RESET</button>
+        </div>
+        <p class="tiny" style="margin:0.5rem 0 0;">Drag a slider — the twenty cells follow through the weight table. Presets are mock archetypes from the exhibition console; CEILING is the Generation 1+2 recovery as a button: DIDO 1 · ρ 1 · PITO 0.63 → FCI 37. Your attached readings are untouched — switch back to Evidence and they are exactly where you left them.</p>
+      </div>`;
+  })();
+
+  const tiers = tierStates(st);
+  const strip = `
+    <div class="fci-strip">
+      ${tiers.map(t=>{
+        const has = !!t.axes;
+        const v = has ? t.axes.dido*(1-t.axes.pito) : null;
+        const vf = has ? (rho!=null ? (v*rho*100).toFixed(1) : (v*100).toFixed(1)) : '—';
+        const dTxt = (t.delta==null || t.sim) ? '' :
+          ` · Δ ${t.delta>=0?'+':''}${(t.delta*100).toFixed(1)} vs whole-city`;
+        return `<div class="tier">
+          <div class="t-name">${esc(t.scale.label)}</div>
+          <div class="t-val">${vf}</div>
+          <div class="t-sub">${has ? (t.sim ? 'projected from sliders' : 'fitted from '+t.n+' cell(s)'+dTxt) : (t.n<2 ? 'needs ≥2 measured cells' : 'fit degenerate — weights too similar')}${rho==null && has ? ' · ρ pending' : ''}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="tiny" style="margin:0.4rem 0 0;">Five FCIs, one per scale — the matryoshka reading. Δ is the divergence between a tier fitted from its own cells and the whole-city projection: where it is large, that tier is telling a story the city average hides. Bioregion and Planet remain boundary readings — watched, never rolled up.</p>`;
+
+  el.innerHTML = modeBtns + formula + fciBlock + narrative + sim + strip;
+  wireBanner();
+}
+
+function wireBanner(){
+  $$('#fciBanner .mode-btn').forEach(b=> b.addEventListener('click', ()=>{
+    MODE.set(b.dataset.mode);
+    $('#cellDetail') && $('#cellDetail').classList.remove('show');
+    renderBanner(); buildMatrix(); if($('#view-cities').classList.contains('active')) renderPhase();
+  }));
+  const rs = $('#rhoEst');
+  if(rs){
+    const out = $('#rhoEstOut');
+    rs.addEventListener('input', ()=>{ out.textContent = parseFloat(rs.value).toFixed(2); });
+    $('#rhoEstSave').addEventListener('click', ()=>{ RHOEST.set(parseFloat(rs.value)); renderBanner(); });
+  }
+  const rc = $('#rhoEstClear');
+  if(rc) rc.addEventListener('click', ()=>{ RHOEST.set(null); renderBanner(); });
+  ['pito','dido','rho'].forEach(ax=>{
+    const s = $('#sim-'+ax);
+    if(!s) return;
+    s.addEventListener('input', ()=>{
+      const st = SIMST.get();
+      st[ax] = parseFloat(s.value);
+      st.name = 'CUSTOM · mock ○';
+      SIMST.set(st);
+      const out = $('#simOut-'+ax);
+      if(out) out.textContent = st[ax].toFixed(2);
+      renderBannerLight();
+      buildMatrix();
+    });
+    s.addEventListener('change', ()=>{ renderBanner(); });
+  });
+  $$('#fciBanner [data-preset]').forEach(b=> b.addEventListener('click', ()=>{
+    if(b.dataset.preset==='__reset'){ SIMST.set(Object.assign({}, SIM_DEFAULT)); }
+    else{
+      const a = SIM.archetypes.find(x=>x.id===b.dataset.preset);
+      if(a) SIMST.set({ pito:a.pito, dido:a.dido, rho:a.rho, name:a.name+' — '+a.label });
+    }
+    renderBanner(); buildMatrix();
+  }));
+}
+
+/* Cheap partial update while a sim slider is being dragged (full re-render
+   would destroy the slider mid-drag). */
+function renderBannerLight(){
+  const s = SIMST.get();
+  const dd = s.dido*(1-s.pito), fci = dd*s.rho*100;
+  const big = $('#fciBanner .fci-big');
+  if(big) big.innerHTML = fci.toFixed(1)+'<small> / 100</small>';
+  const nl = $('#fciBanner .narrative-line');
+  if(nl) nl.textContent = narrativeFor({pito:s.pito, dido:s.dido}, s.rho);
+  const mk = $('#fciBanner .fci-scale .marker:not(.hollow)');
+  if(mk) mk.style.left = Math.max(0,Math.min(100,fci))+'%';
+  const hb = $('#fciBanner .fci-scale .marker.hollow');
+  if(hb) hb.style.left = Math.max(0,Math.min(100,dd*100))+'%';
+}
+
 /* ============================ tabs ============================ */
 $$('#tabs button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -612,31 +962,56 @@ function buildMatrix(){
   });
   h += '</tr>';
 
+  const st = modelState();
+  const isSim = st.basis==='sim';
+  const axes = st.axes;
+
   PILLARS.forEach(p=>{
     h += `<tr><td class="pillar-label" style="color:var(--${p.color}-800);">${esc(p.label)}<span class="pl-sub">${esc(p.plain.split('.')[0])}</span></td>`;
     SCALES.forEach(s=>{
       const key = p.id+':'+s.id, c = CELLS[key];
       if(!c){ h += '<td></td>'; return; }
-      const r = readingFor(key);
+      const r = isSim ? null : readingFor(key);
       const hasScore = r && typeof r.score === 'number';
-      const bg = hasScore ? kaosBg(r.score, r.kind==='estimate' ? 0.26 : 0.40) : '';
-      const ink = hasScore ? kaosInk(r.score) : 'var(--text-muted)';
-      const kind = r ? (r.kind||'none') : 'none';
-      const kindLbl = r
-        ? (r.ws ? (r.light||'dotted') : (READING_KINDS[kind] ? READING_KINDS[kind].short : kind))
-        : 'no reading';
-      h += `<td><button class="cell-btn ${kind==='estimate'?'is-estimate':''} ${c.generation12?'is-gen12':''}"
+
+      /* model completion: sim mode derives every cell; model mode derives
+         only the cells that have no reading of their own */
+      const dv = (axes && (isSim || !hasScore)) ? derivedFor(key, axes) : null;
+      const delta = (!isSim && axes && hasScore && r.kind!=='estimate') ? (r.score - derivedFor(key, axes)) : null;
+
+      let kind, kindLbl, scoreHtml, bg, extraCls='';
+      if(hasScore){
+        kind = r.kind||'none';
+        kindLbl = r.ws ? (r.light||'dotted') : (READING_KINDS[kind] ? READING_KINDS[kind].short : kind);
+        bg = kaosBg(r.score, kind==='estimate' ? 0.26 : 0.40);
+        const ink = kaosInk(r.score);
+        scoreHtml = `<span class="cell-read" style="color:${ink};">${r.score.toFixed(2)}</span>`;
+        if(kind==='estimate') extraCls='is-estimate';
+      } else if(dv!==null){
+        kind = 'derived';
+        kindLbl = READING_KINDS.derived.short;
+        bg = kaosBg(dv, 0.16);
+        scoreHtml = `<span class="cell-read" style="color:${kaosInk(dv)};">${dv.toFixed(2)}</span>`;
+        extraCls = 'is-derived';
+      } else {
+        kind = 'none';
+        kindLbl = r ? (r.light||'dotted') : 'no reading';
+        bg = '';
+        scoreHtml = `<span class="cell-read none">no reading yet</span>`;
+      }
+
+      h += `<td><button class="cell-btn ${extraCls} ${c.generation12?'is-gen12':''}"
               data-key="${esc(key)}" style="${bg?`background:${bg};`:''}"
-              aria-label="${esc(cellLabel(key))}">
+              aria-label="${esc(cellLabel(key))}${kind==='derived'?' — derived from model, not a measurement':''}">
         ${c.generation12?'<span class="gen12-flag">GEN 1+2</span>':''}
         <span class="cell-kind kind-${kind==='none'?'none':kind}">${esc(kindLbl)}</span>
         <span class="cell-title">${esc(cellLabel(key))}</span>
-        ${hasScore
-          ? `<span class="cell-read" style="color:${ink};">${r.score.toFixed(2)}</span>`
-          : `<span class="cell-read none">no reading yet</span>`}
+        ${scoreHtml}
         <span class="cell-foot">
           <span class="cell-w">P ${c.pito.toFixed(2)} · D ${c.dido.toFixed(2)}</span>
-          <span class="cell-feeder">${esc((FEEDER_META[c.feeder]||{}).short||'')}</span>
+          ${delta!==null
+            ? `<span class="cell-delta" title="residual: reading minus model projection — where it is large, this cell is telling a story the axes miss">Δ ${delta>=0?'+':''}${delta.toFixed(2)}</span>`
+            : `<span class="cell-feeder">${esc((FEEDER_META[c.feeder]||{}).short||'')}</span>`}
         </span>
       </button></td>`;
     });
@@ -648,7 +1023,7 @@ function buildMatrix(){
   $('#kindLegend').innerHTML = '<span style="font-weight:500; color:var(--text-primary);">Reading type:</span>' +
     Object.keys(READING_KINDS).map(k=>`<span class="cell-kind kind-${k}">${esc(READING_KINDS[k].short)}</span>`).join('') +
     '<span class="cell-kind kind-none">no reading</span>' +
-    '<span class="tiny">estimates are cross-hatched — judgement, not measurement</span>';
+    '<span class="tiny">estimates and model projections are cross-hatched — judgement and projection, not measurement</span>';
 
   $('#feederLegend').innerHTML = '<span style="font-weight:500; color:var(--text-primary);">Who feeds it:</span>' +
     Object.keys(FEEDER_META).map(k=>`<span>${esc(FEEDER_META[k].short)}</span>`).join('');
@@ -697,14 +1072,48 @@ function showCell(key){
       ${indRows}
     </table></div>
 
-    ${ LS.wsOn() ? renderWsCard(key) : renderReadingBox(key) }
+    ${ modelInfoFor(key) }
+    ${ LS.wsOn() ? renderWsCard(key) : (MODE.get()==='sim' ? '' : renderReadingBox(key)) }
   `;
-  if(LS.wsOn()) wireWsCard(key); else wireReadingBox(key);
+  if(LS.wsOn()) wireWsCard(key); else if(MODE.get()!=='sim') wireReadingBox(key);
   const panel = $('#cellDetail');
   panel.classList.add('show');
   if(typeof panel.scrollIntoView === 'function'){ try{ panel.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){} }
 }
 $('#closeDetail').addEventListener('click', ()=> $('#cellDetail').classList.remove('show'));
+
+/* Model context inside the cell panel: what the projection says about this
+   cell, and — when a real reading exists — the Δ residual against it. */
+function modelInfoFor(key){
+  const st = modelState();
+  if(!st.axes) return '';
+  const c = CELLS[key];
+  const dv = derivedFor(key, st.axes);
+  const isSim = st.basis==='sim';
+  const r = isSim ? null : LS.read(key);
+  const hasScore = r && typeof r.score==='number';
+
+  if(isSim){
+    return `<div class="warn-note" style="margin-top:1rem;">
+      <strong style="font-weight:600;">○ ${esc(SIM.badge)}.</strong>
+      This cell reads <strong style="font-weight:600;">${dv.toFixed(2)}</strong> — projected from the sliders through this cell's weights:
+      (1−PITO ${(1-st.axes.pito).toFixed(2)})·${c.pito.toFixed(2)} + DIDO ${st.axes.dido.toFixed(2)}·${c.dido.toFixed(2)}.
+      Switch back to Evidence to attach real readings.</div>`;
+  }
+  if(hasScore && r.kind!=='estimate'){
+    const delta = r.score - dv;
+    return `<div class="current-read" style="border-color:var(--purple-600);">
+      <strong style="font-weight:500;">Model check:</strong> the fitted axes project this cell at <span class="big">${dv.toFixed(2)}</span>;
+      the attached reading says <span class="big">${r.score.toFixed(2)}</span> —
+      residual <span class="big" style="color:var(--purple-800);">Δ ${delta>=0?'+':''}${delta.toFixed(2)}</span>.
+      A large Δ is information: this cell is telling a story the whole-city axes miss.</div>`;
+  }
+  if(!hasScore){
+    return `<div class="current-read" style="border-color:var(--purple-600);">
+      <strong style="font-weight:500;">Derived value ${dv.toFixed(2)}</strong> — a model projection from the ${st.n} ${st.basis==='estimates'?'estimated':'measured'} cell(s), through this cell's weights. It is cross-hatched in the matrix because it is not evidence. Attaching a real reading below replaces it and sharpens the fit.</div>`;
+  }
+  return '';
+}
 
 /* ============================ reading box (3 modes) ============================ */
 function renderReadingBox(key){
@@ -828,12 +1237,12 @@ function wireReadingBox(key){
 
   $$('#cellDetailBody [data-act]').forEach(b=> b.addEventListener('click', ()=>{
     const k = b.dataset.key, act = b.dataset.act;
-    if(act==='clear'){ LS.delRead(k); showCell(k); buildMatrix(); return; }
+    if(act==='clear'){ LS.delRead(k); showCell(k); buildMatrix(); renderBanner(); return; }
 
     if(act==='save-est'){
       const v = parseFloat($('#estSlider-'+sid).value);
       LS.setRead(k, { kind:'estimate', score:v, by:$('#estBy-'+sid).value.trim(), note:$('#estNote-'+sid).value.trim(), savedAt:new Date().toISOString().slice(0,10) });
-      showCell(k); buildMatrix(); return;
+      showCell(k); buildMatrix(); renderBanner(); return;
     }
 
     if(act==='save-static'){
@@ -846,7 +1255,7 @@ function wireReadingBox(key){
       const date = $('#statDate-'+sid).value, src = $('#statSrc-'+sid).value.trim();
       if(!date || !src){ st.textContent='Observation date and source are required — a value without them is not auditable.'; st.className='status-line err'; return; }
       LS.setRead(k, { kind:'static', score, value:val, unit:ind.unit, indIx:ix, min, max, dir:ind.direction, obsDate:date, source:src, by:$('#statBy-'+sid).value.trim(), savedAt:new Date().toISOString().slice(0,10) });
-      showCell(k); buildMatrix(); return;
+      showCell(k); buildMatrix(); renderBanner(); return;
     }
 
     if(act==='test-live' || act==='save-live'){
@@ -857,7 +1266,7 @@ function wireReadingBox(key){
       if(act==='save-live'){
         const score = normalise(0, min, max, dir); // validate range only
         LS.setRead(k, { kind:'live', score: typeof LS.read(k)?.score==='number'?LS.read(k).score:0.5, url, path, min, max, dir, savedAt:new Date().toISOString().slice(0,10) });
-        showCell(k); buildMatrix(); return;
+        showCell(k); buildMatrix(); renderBanner(); return;
       }
       st.textContent='Calling…'; st.className='status-line';
       fetch(url,{mode:'cors'}).then(r=>r.json()).then(json=>{
@@ -866,7 +1275,7 @@ function wireReadingBox(key){
         if(score===null){ st.textContent='Read '+JSON.stringify(v)+' but could not scale it — check min/max.'; st.className='status-line err'; return; }
         LS.setRead(k, { kind:'live', score, url, path, min, max, dir, value:v, lastFetch:new Date().toISOString() });
         st.textContent='Read '+JSON.stringify(v)+' → normalised '+score.toFixed(2)+'. Saved.'; st.className='status-line ok';
-        buildMatrix();
+        buildMatrix(); renderBanner();
       }).catch(()=>{
         st.textContent='Could not reach this endpoint from the browser (CORS or network). You can still save it — a server-side fetch will pick it up.';
         st.className='status-line err';
@@ -943,7 +1352,7 @@ function renderWsUI(){
     el.classList.toggle('over', n>=WS_LIMIT);
   } else el.textContent = on ? 'Enter a table name to start dotting.' : '';
 }
-$('#wsToggle').addEventListener('click', ()=>{ LS.setWs(!LS.wsOn()); $('#cellDetail').classList.remove('show'); buildMatrix(); });
+$('#wsToggle').addEventListener('click', ()=>{ LS.setWs(!LS.wsOn()); if(LS.wsOn()) MODE.set('evidence'); $('#cellDetail').classList.remove('show'); buildMatrix(); renderBanner(); });
 $('#wsApplySetup').addEventListener('click', ()=>{
   const t = $('#wsTableName').value.trim();
   if(!t){ $('#wsTableName').focus(); return; }
@@ -1077,6 +1486,7 @@ $('#termCards').innerHTML = ['dido','pito','rho'].map(k=>{
     <p class="q-line" style="font-size:15px; margin:0.3rem 0 0.6rem;">${esc(T.plain)}</p>
     <p class="tiny">${esc(T.technical)}</p>
     <p class="tiny" style="font-family:var(--font-mono); color:var(--text-secondary);">${esc(T.formula)}</p>
+    ${T.symbolNote?`<p class="tiny" style="color:var(--amber-800);">${esc(T.symbolNote)}</p>`:''}
   </div>`;
 }).join('');
 $('#boeingPlain').textContent = METHODOLOGY.boeingPlain;
@@ -1139,6 +1549,29 @@ $('#wsAfter').textContent = WORKSHOP.afterwards;
 
 /* ============================ gaps ============================ */
 $('#gapsList').innerHTML = METHODOLOGY.openGaps.map(g=>`<li class="plain" style="margin-bottom:0.5rem;">${esc(g)}</li>`).join('');
+
+/* weight-table divergence: this dashboard vs the exhibition console */
+(()=>{
+  const t = $('#weightsDiffTable'); if(!t) return;
+  let agree = 0, rows = '';
+  PILLARS.forEach(p=>{
+    SCALES.forEach((s,j)=>{
+      const key = p.id+':'+s.id, c = CELLS[key];
+      if(!c) return;
+      const sim = (SIM.wts[p.id]||[])[j];
+      const same = sim && Math.abs(c.pito-sim[0])<0.001 && Math.abs(c.dido-sim[1])<0.001;
+      if(same) agree++;
+      rows += `<tr>
+        <td><strong style="font-weight:500;">${esc(cellLabel(key))}</strong></td>
+        <td class="tiny"><code>${c.pito.toFixed(2)} / ${c.dido.toFixed(2)}</code> <span class="tiny">(${c.wSource})</span></td>
+        <td class="tiny">${sim?`<code>${sim[0].toFixed(2)} / ${sim[1].toFixed(2)}</code>`:'—'}</td>
+        <td>${same?'<span class="feas-chip feas-high">agree</span>':'<span class="feas-chip feas-medium">diverge</span>'}</td>
+      </tr>`;
+    });
+  });
+  t.innerHTML = '<tr><th>Cell</th><th>This dashboard (PITO/DIDO)</th><th>Exhibition console</th><th></th></tr>' + rows;
+  const n = $('#wtsAgreeCount'); if(n) n.textContent = agree;
+})();
 $('#footerNote').innerHTML = esc(META.disclaimer) + '<br><br>Built from: FCI 3.0 prototype (' + esc(META.siteUrl) + ' — matrix, methodology, atlas, phase plot, operator workbench) · Vivanco, T., <em>Fab City Full Stack Metrics Framework</em> (FAB26 working paper) · Diez, Charny &amp; Kohtala (2024), <em>The Fab City Full Stack</em>. ' + esc(META.version) + '.';
 
 /* ============================ cities / phase plot ============================ */
@@ -1160,6 +1593,34 @@ function renderPhase(){
   e += `<text x="18" y="${H/2}" text-anchor="middle" font-size="12" fill="var(--text-secondary)" transform="rotate(-90 18 ${H/2})">DIDO — senses, shares, makes locally →</text>`;
   e += `<text x="${pad+10}" y="${pad+18}" font-size="11" fill="var(--green-800)">target regime</text>`;
   e += `<text x="${W-pad-8}" y="${H-pad-10}" text-anchor="end" font-size="11" fill="var(--text-muted)">linear-extractive baseline</text>`;
+
+  /* iso-FCI curve at the Generation 1+2 ceiling: DIDO·(1−PITO) = 0.37 with
+     ρ = 1. Every point on this red curve scores exactly the old 37/100. */
+  (()=>{
+    let d = '';
+    for(let p=0; p<=0.631; p+=0.01){
+      const dd = 0.37/(1-p);
+      if(dd>1.001) break;
+      d += (d?' L':'M') + ' ' + X(p).toFixed(1) + ' ' + Y(Math.min(1,dd)).toFixed(1);
+    }
+    e += `<path d="${d}" fill="none" stroke="var(--border-danger)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.75"/>`;
+    e += `<text x="${X(0.06)}" y="${Y(0.37/(1-0.06))+16}" font-size="10" fill="var(--text-danger)">FCI = 37 at ρ = 1 — the ceiling curve</text>`;
+  })();
+
+  /* the model's own city — fitted from evidence, or driven by the sim sliders */
+  (()=>{
+    const st = modelState();
+    if(!st.axes) return;
+    const cx = X(st.axes.pito), cy = Y(st.axes.dido);
+    const rho = st.rho;
+    const ring = rho==null ? 7 : 6 + rho*12;
+    const isSim = st.basis==='sim';
+    e += `<circle cx="${cx}" cy="${cy}" r="${ring.toFixed(1)}" fill="none" stroke="var(--purple-600)" stroke-width="1.5" ${rho==null?'stroke-dasharray="3,3"':''} opacity="0.85"/>`;
+    e += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="var(--purple-600)" stroke="var(--surface-2)" stroke-width="1.5"/>`;
+    e += `<text x="${cx}" y="${cy-ring-6}" text-anchor="middle" font-size="11" fill="var(--purple-800)" font-weight="500">${isSim?'simulated city ○':'your data (model fit)'}</text>`;
+    e += `<text x="${cx}" y="${cy+ring+14}" text-anchor="middle" font-size="9" fill="var(--text-muted)">ring = ρ ${rho!=null?rho.toFixed(2):'not set'}${isSim?' · mock':''}</text>`;
+  })();
+
   CITIES.forEach(c=>{
     const d = c.dido===null ? 0.06 : c.dido, cx = X(c.pito), cy = Y(d);
     const sel = c.id===selCity, recon = c.status==='reconstructed';
@@ -1328,7 +1789,7 @@ $('#teamFile') && $('#teamFile').addEventListener('change', ev=>{
     renderLoadReport(report);
     st.textContent = applied + ' reading(s) loaded from ' + f.name + (report.length>applied ? ' — ' + (report.length-applied) + ' row(s) need attention, see below.' : '.');
     st.className = 'status-line ' + (applied ? 'ok' : 'err');
-    buildMatrix();
+    buildMatrix(); renderBanner();
   };
   rd.readAsText(f);
 });
@@ -1355,7 +1816,7 @@ $('#loadRepoBtn') && $('#loadRepoBtn').addEventListener('click', async ()=>{
     renderLoadReport(all);
     st.textContent = total + ' reading(s) loaded from ' + files.length + ' submission file(s).';
     st.className = 'status-line ' + (total ? 'ok' : 'err');
-    buildMatrix();
+    buildMatrix(); renderBanner();
   }catch(e){
     st.textContent = 'Could not read the repo submissions. This needs the page served over http — open it via GitHub Pages, or run "python3 -m http.server" in the repo folder. Use the file picker on the right meanwhile.';
     st.className = 'status-line err';
@@ -1368,7 +1829,7 @@ $('#clearLoadedBtn') && $('#clearLoadedBtn').addEventListener('click', ()=>{
   renderLoadReport([]);
   $('#repoStatus').textContent = 'Cleared ' + n + ' loaded reading(s). Readings you entered by hand were left alone.';
   $('#repoStatus').className = 'status-line ok';
-  buildMatrix();
+  buildMatrix(); renderBanner();
 });
 
 $('#submitSteps') && ($('#submitSteps').innerHTML = [
@@ -1380,6 +1841,7 @@ $('#submitSteps') && ($('#submitSteps').innerHTML = [
 ].map(s=>`<div class="step-row"><div class="step-n">${s.n}</div><div><h4 style="margin-bottom:0.15rem; color:var(--text-primary);">${s.h}</h4><p class="tiny" style="margin:0;">${s.p}</p></div></div>`).join(''));
 
 /* ============================ boot ============================ */
+renderBanner();
 buildMatrix();
 buildCityChips();
 renderCity();

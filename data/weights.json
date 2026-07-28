@@ -1,0 +1,379 @@
+{
+  "$schema": null,
+  "title": "FCI 3.0 — PITO/DIDO weight table (working comparison)",
+  "version": "v0.5 — model completion build",
+  "generated_by": "scripts/gen_weights_json.js — do not edit by hand",
+  "status": "NOT CANON. Three weight tables circulate (FCI 3.0 site v0, this dashboard, the exhibition console); this file makes the divergence machine-readable. The Foundation publishing a versioned canonical table supersedes all three.",
+  "sources": {
+    "dashboard": "assets/data.js (CELLS[key].pito/dido) — active set for this surface",
+    "exhibition_console": "FCI 3.0 exhibition console (fci-simulator-console, July 2026)",
+    "site": "https://staging.fci-index.pages.dev — methodology v0, 12 of 20 cells populated"
+  },
+  "agreement": {
+    "cells_total": 20,
+    "cells_agreeing": 5
+  },
+  "formula": "FCI = DIDO · (1 − PITO) · ρ   — cell projection: cell = (1−PITO)·w_pito + DIDO·w_dido",
+  "cells": [
+    {
+      "cell": "environmental:community",
+      "pillar": "environmental",
+      "scale": "community",
+      "dashboard": {
+        "pito": 0.5,
+        "dido": 0.5,
+        "provenance": "site",
+        "under_review": true,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.5,
+        "dido": 0.5
+      },
+      "agrees": true
+    },
+    {
+      "cell": "environmental:city",
+      "pillar": "environmental",
+      "scale": "city",
+      "dashboard": {
+        "pito": 0.7,
+        "dido": 0.3,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.7,
+        "dido": 0.3
+      },
+      "agrees": true
+    },
+    {
+      "cell": "environmental:region",
+      "pillar": "environmental",
+      "scale": "region",
+      "dashboard": {
+        "pito": 0.7,
+        "dido": 0.3,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.8,
+        "dido": 0.2
+      },
+      "agrees": false
+    },
+    {
+      "cell": "environmental:bioregion",
+      "pillar": "environmental",
+      "scale": "bioregion",
+      "dashboard": {
+        "pito": 0.85,
+        "dido": 0.15,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": true,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.9,
+        "dido": 0.1
+      },
+      "agrees": false
+    },
+    {
+      "cell": "environmental:planet",
+      "pillar": "environmental",
+      "scale": "planet",
+      "dashboard": {
+        "pito": 0.9,
+        "dido": 0.1,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": true,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 1,
+        "dido": 0
+      },
+      "agrees": false
+    },
+    {
+      "cell": "social:community",
+      "pillar": "social",
+      "scale": "community",
+      "dashboard": {
+        "pito": 0.2,
+        "dido": 0.8,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0,
+        "dido": 1
+      },
+      "agrees": false
+    },
+    {
+      "cell": "social:city",
+      "pillar": "social",
+      "scale": "city",
+      "dashboard": {
+        "pito": 0.3,
+        "dido": 0.7,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.1,
+        "dido": 0.9
+      },
+      "agrees": false
+    },
+    {
+      "cell": "social:region",
+      "pillar": "social",
+      "scale": "region",
+      "dashboard": {
+        "pito": 0.3,
+        "dido": 0.7,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.1,
+        "dido": 0.9
+      },
+      "agrees": false
+    },
+    {
+      "cell": "social:bioregion",
+      "pillar": "social",
+      "scale": "bioregion",
+      "dashboard": {
+        "pito": 0.4,
+        "dido": 0.6,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": true,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.1,
+        "dido": 0.9
+      },
+      "agrees": false
+    },
+    {
+      "cell": "social:planet",
+      "pillar": "social",
+      "scale": "planet",
+      "dashboard": {
+        "pito": 0.3,
+        "dido": 0.7,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": true,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.2,
+        "dido": 0.8
+      },
+      "agrees": false
+    },
+    {
+      "cell": "economic:community",
+      "pillar": "economic",
+      "scale": "community",
+      "dashboard": {
+        "pito": 0.3,
+        "dido": 0.7,
+        "provenance": "site",
+        "under_review": true,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.3,
+        "dido": 0.7
+      },
+      "agrees": true
+    },
+    {
+      "cell": "economic:city",
+      "pillar": "economic",
+      "scale": "city",
+      "dashboard": {
+        "pito": 0.5,
+        "dido": 0.5,
+        "provenance": "site",
+        "under_review": false,
+        "boundary": false,
+        "generation12": true
+      },
+      "exhibition_console": {
+        "pito": 0.5,
+        "dido": 0.5
+      },
+      "agrees": true
+    },
+    {
+      "cell": "economic:region",
+      "pillar": "economic",
+      "scale": "region",
+      "dashboard": {
+        "pito": 0.5,
+        "dido": 0.5,
+        "provenance": "site",
+        "under_review": false,
+        "boundary": false,
+        "generation12": true
+      },
+      "exhibition_console": {
+        "pito": 0.6,
+        "dido": 0.4
+      },
+      "agrees": false
+    },
+    {
+      "cell": "economic:bioregion",
+      "pillar": "economic",
+      "scale": "bioregion",
+      "dashboard": {
+        "pito": 0.8,
+        "dido": 0.2,
+        "provenance": "site",
+        "under_review": true,
+        "boundary": true,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0.8,
+        "dido": 0.2
+      },
+      "agrees": true
+    },
+    {
+      "cell": "economic:planet",
+      "pillar": "economic",
+      "scale": "planet",
+      "dashboard": {
+        "pito": 0.75,
+        "dido": 0.25,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": true,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 1,
+        "dido": 0
+      },
+      "agrees": false
+    },
+    {
+      "cell": "governance:community",
+      "pillar": "governance",
+      "scale": "community",
+      "dashboard": {
+        "pito": 0.1,
+        "dido": 0.9,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0,
+        "dido": 1
+      },
+      "agrees": false
+    },
+    {
+      "cell": "governance:city",
+      "pillar": "governance",
+      "scale": "city",
+      "dashboard": {
+        "pito": 0.15,
+        "dido": 0.85,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0,
+        "dido": 1
+      },
+      "agrees": false
+    },
+    {
+      "cell": "governance:region",
+      "pillar": "governance",
+      "scale": "region",
+      "dashboard": {
+        "pito": 0.2,
+        "dido": 0.8,
+        "provenance": "site",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0,
+        "dido": 1
+      },
+      "agrees": false
+    },
+    {
+      "cell": "governance:bioregion",
+      "pillar": "governance",
+      "scale": "bioregion",
+      "dashboard": {
+        "pito": 0.2,
+        "dido": 0.8,
+        "provenance": "site",
+        "under_review": false,
+        "boundary": false,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0,
+        "dido": 1
+      },
+      "agrees": false
+    },
+    {
+      "cell": "governance:planet",
+      "pillar": "governance",
+      "scale": "planet",
+      "dashboard": {
+        "pito": 0.15,
+        "dido": 0.85,
+        "provenance": "reconstructed",
+        "under_review": false,
+        "boundary": true,
+        "generation12": false
+      },
+      "exhibition_console": {
+        "pito": 0,
+        "dido": 1
+      },
+      "agrees": false
+    }
+  ]
+}

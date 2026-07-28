@@ -1,0 +1,125 @@
+# FC_MetricsDashboard · connector manifest
+# ----------------------------------------------------------------------
+# Per the PLANETAI data-layer convention, every Fab City surface keeps its
+# own connector manifest with the same schema shape as
+# planetai_publish/observatory/data/connectors.yaml, and cross-references
+# the network discovery list instead of maintaining a parallel inventory:
+#
+#   discovery list (what data exists):
+#     https://github.com/fabcity/awesome-fabcity-data
+#     entries: data/{pillar}/{scale}/{slug}.yaml
+#   this manifest (what THIS surface uses):
+#     data/connectors.yaml  (this file)
+#
+# Status vocabulary, aligned with the shared provenance discipline:
+#   live     — wired, refreshes without a human
+#   cached   — fetched by a scheduled job, committed as a dated snapshot
+#   manual   — entered through the dashboard's reading panel
+#   planned  — named target, not yet wired
+#
+# Nothing in this dashboard is `live` yet: the frontend is a single static
+# file and browser CORS blocks most endpoints. The intended pattern is a
+# scheduled GitHub Action that fetches each source below, normalises it,
+# and commits a dated JSON snapshot into data/snapshots/ — rendered by the
+# dashboard as `cached`, with full git history as the provenance ledger.
+# ----------------------------------------------------------------------
+
+version: 0.1
+generated_at: 2026-07-28
+surface: FC_MetricsDashboard (tomasvivanco.github.io/FC_MetricsDashboard)
+canonical_source: https://github.com/fabcity/awesome-fabcity-data
+observatory_counterpart: planetai_publish/observatory/data/connectors.yaml
+
+connectors:
+
+  # ── the nine network-own sources (see NETWORK_SOURCES in assets/data.js) ──
+
+  - slug: fablabs-io
+    upstream: data/network/fablabs-io.yaml
+    status: planned
+    feeds: [economic:city]
+    endpoint: https://api.fablabs.io/0/labs
+    auth: none
+    effort_days: 0.5
+    notes: |
+      Lab roster within a 50 km catchment. Also live in the PLANETAI
+      observatory (single-flight memoizer, 30-min cache) — prefer consuming
+      the observatory's snapshot over wiring a parallel fetch.
+
+  - slug: smart-citizen
+    upstream: data/environmental/community/smart-citizen.yaml
+    status: planned
+    feeds: [environmental:community, environmental:city]
+    endpoint: https://api.smartcitizen.me/v0
+    auth: none
+    effort_days: 0.5
+    notes: |
+      Kit count + uptime. Observatory audit (Wave 20): BCN archive ~98%
+      dormant — 25 of 1,408 kits actively reporting. Count only kits with
+      recent readings, or the indicator flatters itself.
+
+  - slug: fab-academy-alumni
+    upstream: data/social/city/fab-academy.yaml   # not yet authored upstream — contribute first
+    status: planned
+    feeds: [economic:city, social:city, social:bioregion]
+    endpoint: Fab Academy registry
+    effort_days: 1
+
+  - slug: precious-plastic
+    upstream: data/economic/community/precious-plastic.yaml   # not yet authored upstream — contribute first
+    status: planned
+    feeds: [economic:community, economic:city]
+    endpoint: Precious Plastic Universe API
+    effort_days: 1
+    notes: kg processed by chapters — a real circularity number nobody else holds.
+
+  - slug: osm-craft-density
+    upstream: data/economic/community/openstreetmap-overpass.yaml   # not yet authored upstream
+    status: planned
+    feeds: [economic:community, economic:city]
+    endpoint: https://overpass-api.de/api/interpreter
+    auth: none
+    effort_days: 1
+
+  - slug: decidim-health
+    upstream: data/governance/city/decidim.yaml   # not yet authored upstream
+    status: planned
+    feeds: [governance:city]
+    endpoint: per-city Decidim instance API
+    effort_days: 1
+
+  - slug: fab-gosh-attendance
+    upstream: data/social/bioregion/fab-events.yaml   # not yet authored upstream
+    status: planned
+    feeds: [social:bioregion]
+    endpoint: event attendance records (manual export)
+    effort_days: 0.5
+
+  - slug: community-photo-classification
+    upstream: data/environmental/community/photo-classification.yaml   # not yet authored upstream
+    status: planned
+    feeds: [environmental:community, environmental:bioregion]
+    effort_days: 3
+    notes: medium effort — needs a classification pipeline, not just an API call.
+
+  - slug: drone-mapping
+    upstream: data/environmental/community/lab-drone-mapping.yaml   # not yet authored upstream
+    status: planned
+    feeds: [environmental:community]
+    effort_days: 3
+    notes: IAAC pattern — lab flies it, lab owns the imagery.
+
+  # ── manual routes actually in use today ──────────────────────────────
+
+  - slug: team-csv-submissions
+    status: manual
+    feeds: [any]
+    endpoint: data/submissions/*.csv via data/submissions/index.json
+    notes: |
+      The workshop pipeline. Row-by-row validation mirrored between the
+      dashboard (ingestCsv) and scripts/validate_submission.py.
+
+  - slug: reading-panel
+    status: manual
+    feeds: [any]
+    notes: live-URL / static / estimate entry per cell, signed and dated.

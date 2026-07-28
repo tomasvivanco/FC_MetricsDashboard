@@ -25,7 +25,7 @@ causal evidence that any of it changes a city's trajectory. Not because nobody t
 no instrument connecting a repair log in one neighbourhood to a planetary limit. This dashboard is an
 attempt at that instrument.
 
-It does five things:
+It does six things:
 
 **1. Renders the twenty-cell matrix.** Four pillars (environmental, social, economic, governance) across
 five scales (community, city, region, bioregion, planet). Each cell asks one plain question, names the
@@ -42,6 +42,7 @@ honest state, not a failure.
 | **Live** | Pulled from a connected API or webhook; refreshes itself | Solid colour, `live` tag |
 | **Static** | A real value from a file or a signed manual entry, frozen at its observation date | Solid colour, `static` tag |
 | **Estimate** | Nobody has data, so a person moved a slider | **Cross-hatched**, `estimate` tag |
+| **Derived** | No reading — the model projected it from the cells that *are* measured | **Cross-hatched + dashed border**, `derived · model` tag |
 
 An instrument that renders a measurement and a guess identically is lying by design. This one refuses to.
 
@@ -49,7 +50,18 @@ An instrument that renders a measurement and a guess identically is lying by des
 Raw values only — the normalisation to 0–1 happens in the open, using a stated reference, so anyone can
 disagree with it specifically rather than vaguely.
 
-**5. Runs the WS3 workshop.** A dedicated mode where tables dot the matrix green / yellow / dark, fill one
+**5. Completes the picture with a model — and says so.** A city is three axes: PITO, DIDO and ρ.
+Each cell is their projection through its weights (`cell = (1−PITO)·w_pito + DIDO·w_dido`) — the same
+logic as the FCI exhibition console. In **Evidence + model** view, measured cells stay fixed and fit the
+axes by least squares; dark cells fill with `derived` projections; measured cells show their Δ residual
+against the model. In **Simulation** view the console itself runs here: three sliders, mock presets
+(BCN · BOS · SCL · BALI · CEILING — the last one is the Generation 1+2 recovery: DIDO 1 · ρ 1 · PITO 0.63
+→ FCI 37), everything badged *SIMULATION · NOT A MEASUREMENT*. A slider never overwrites a reading, and
+**Evidence** view — grey means no data — is always one click away. The FCI banner keeps the formula, the
+0–100 scale with the 37 ceiling, the five-FCIs-per-scale matryoshka strip, and a one-sentence plain
+reading of the state, always in sight.
+
+**6. Runs the WS3 workshop.** A dedicated mode where tables dot the matrix green / yellow / dark, fill one
 card per cell (one cell, one source, one name, one date, one first step), and the facilitator collects
 every card from a single sheet.
 
@@ -87,7 +99,7 @@ Decidim and others) as the honest route upward.
 │   ├── README.md               Start here if you are new to the project.
 │   ├── 01-project-brief.md     What this is, who it is for, decisions taken.
 │   ├── 02-methodology.md       FCI 3.0: formula, weights, aggregation, ρ.
-│   ├── 03-full-stack.md        Vivanco's framework: 7 layers, 5 scales, 4 pillars.
+│   ├── 03-full-stack.md        Full Stack Metrics Framework: 7 layers, 5 scales, 4 pillars.
 │   ├── 04-sovereignty-audit.md Who can produce which number, and the counts.
 │   ├── 05-data-model.md        Every cell and indicator, with units and methods.
 │   ├── 06-workshop-ws3.md      The workshop, and how the dashboard serves it.
@@ -174,7 +186,7 @@ Named honestly, because the credibility depends on it:
   (0.8/0.2), Environmental × Community (0.5/0.5), Economic × Community (0.3/0.7).
 - The Boeing numerical recovery is sketched, not formal.
 - The ρ measurement protocol is a v0 note; tier-weighting and council-rejection handling are open.
-- Vivanco's matrix is a working paper plus a 2025 doctoral thesis, not peer-reviewed in its own right.
+- The Full Stack Metrics Framework [Vivanco 2024] is a working paper plus a 2025 doctoral thesis, not peer-reviewed in its own right.
 - A 2025 review of ~1,000 fab lab impact studies (Peuckert et al.) found strong evidence for learning and
   entrepreneurship outcomes, and almost none for bioregional or knowledge-sharing layers. The upper half
   of this matrix is, evidentially, close to empty.

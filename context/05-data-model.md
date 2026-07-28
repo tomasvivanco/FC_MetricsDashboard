@@ -1,4 +1,5 @@
-# 05 · Data model reference
+written: 606 lines
+reference
 
 > **Generated from `assets/data.js`.** Do not edit by hand — regenerate with
 > `node scripts/gen_datamodel_doc.js > context/05-data-model.md` after changing the model.
@@ -21,6 +22,7 @@ only structure, content and provenance. Everything the interface renders comes f
 | `FEASIBILITY` | High / medium / low tiers with definitions |
 | `CELLS` | The twenty cells and their indicators — the core of the model |
 | `METHODOLOGY` | Formula, terms, Boeing recovery, aggregation, open gaps |
+| `SIM` | Exhibition-console layer: mock archetypes, console weight table (comparison only), narrative bands |
 | `FULL_STACK_LAYERS` | The seven layers |
 | `INGESTION_ROUTES` | The four ways data enters |
 | `CSV_SCHEMA` | Submission column definitions |
@@ -76,12 +78,13 @@ regenerative (green)** and 0 always extractive (red). A `pito`-direction indicat
 | `live` | Live | Measurement | solid colour |
 | `static` | Static | Measurement | solid colour |
 | `estimate` | Estimate | Judgement — not evidence | **cross-hatched** |
+| `derived` | Derived | Model projection — not evidence | solid colour |
 
 ### Feeder categories
 
 | Key | Label | Meaning |
 |---|---|---|
-| `lab` | Lab-fed | The lab or community generates this directly |
+| `lab` | Hub-fed | The hub — lab plus its community — produces this directly |
 | `mixed` | Mixed | The lab supplies part; the rest needs external data |
 | `institutional` | External | Requires a statistical agency, government, or international database |
 | `fixed` | Boundary | Planetary or ecological reference — travels down, never up |
@@ -140,7 +143,7 @@ regenerative (green)** and 0 always extractive (red). A `pito`-direction indicat
 | Weights | PITO 0.50 · DIDO 0.50 |
 | Weight provenance | documented upstream |
 | Upstream data state | Mock |
-| Who feeds it | Lab-fed — The lab or community generates this directly |
+| Who feeds it | Hub-fed — The hub — lab plus its community — produces this directly |
 | Flags | ⚠ weight under review |
 
 One of three cells the FCI 3.0 methodology explicitly flags for sharpened argument before the v0 weights harden — the 0.5/0.5 split is contested.
@@ -258,7 +261,7 @@ Planetary boundary horizon (Rockström et al. 2009; Steffen et al. 2015; Richard
 | Weights | PITO 0.20 · DIDO 0.80 |
 | Weight provenance | **reconstructed** — working proposal |
 | Upstream data state | Mock |
-| Who feeds it | Lab-fed — The lab or community generates this directly |
+| Who feeds it | Hub-fed — The hub — lab plus its community — produces this directly |
 
 The highest-feasibility cell in the whole matrix: [B] §5.4 identifies participation and training as measurable directly from records a lab already keeps.
 
@@ -376,7 +379,7 @@ Full Stack Layer 7 — global knowledge exchange. This is the layer that makes a
 | Weights | PITO 0.30 · DIDO 0.70 |
 | Weight provenance | documented upstream |
 | Upstream data state | Mock |
-| Who feeds it | Lab-fed — The lab or community generates this directly |
+| Who feeds it | Hub-fed — The hub — lab plus its community — produces this directly |
 | Flags | ⚠ weight under review |
 
 Flagged in FCI 3.0 methodology §3 as needing sharpened argument before the weights harden.
@@ -494,7 +497,7 @@ The structural ceiling itself, as an explicit horizon. This is the cell that exp
 | Weights | PITO 0.10 · DIDO 0.90 |
 | Weight provenance | **reconstructed** — working proposal |
 | Upstream data state | Mock |
-| Who feeds it | Lab-fed — The lab or community generates this directly |
+| Who feeds it | Hub-fed — The hub — lab plus its community — produces this directly |
 
 [B] argues governance is not one pillar among four but the condition for the other three: without regular meetings, clear responsibilities and documented protocols, the environmental, social and economic metrics cannot be maintained at all.
 
@@ -601,4 +604,4 @@ Layer 7 plus what [B] calls planetary computation (Vivanco 2025): local readings
 
 ---
 
-*Generated from `assets/data.js` · v0.4 — workshop build*
+*Generated from `assets/data.js` · v0.5 — model completion build*

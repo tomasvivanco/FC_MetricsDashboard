@@ -19,13 +19,13 @@
    ============================================================================ */
 
 const META = {
-  version: "v0.4 — workshop build",
+  version: "v0.5 — model completion build",
   methodologyStatus: "Methodology v0 · beta · in review toward v1",
   cellsPopulatedOnSite: 12,
   cellsTotal: 20,
   weightsUnderReview: ["economic:bioregion", "environmental:community", "economic:community"],
   siteUrl: "https://staging.fci-index.pages.dev",
-  disclaimer: "This dashboard is a working research instrument built from the FCI 3.0 prototype and Vivanco's FAB26 working paper. It is not an official publication of the Fab City Foundation. Weights marked 'reconstructed' are a proposal for discussion, not canon."
+  disclaimer: "This dashboard is a working research instrument built from the FCI 3.0 prototype and the Full Stack Metrics Framework FAB26 working paper [Vivanco 2024]. It is not an official publication of the Fab City Foundation. Weights marked 'reconstructed' are a proposal for discussion, not canon. Values marked 'derived' are model projections, never measurements."
 };
 
 /* ---------------------------------------------------------------------------
@@ -91,7 +91,8 @@ const DATA_STATES = {
 const READING_KINDS = {
   live:     { label:"Live", short:"live", plain:"Pulled automatically from a connected API or webhook. Refreshes itself.", rigor:"Measurement" },
   static:   { label:"Static", short:"static", plain:"A real value from a file or a signed manual entry. Real, but frozen at its observation date.", rigor:"Measurement" },
-  estimate: { label:"Estimate", short:"estimate", plain:"Nobody has data yet, so a person moved a slider to their best judgement. Useful for seeing the shape. Never a measurement.", rigor:"Judgement — not evidence" }
+  estimate: { label:"Estimate", short:"estimate", plain:"Nobody has data yet, so a person moved a slider to their best judgement. Useful for seeing the shape. Never a measurement.", rigor:"Judgement — not evidence" },
+  derived:  { label:"Derived", short:"derived · model", plain:"No reading attached. The model projected this value from the cells that ARE measured, through the weight table. It fills the dark cells so you can see the shape the evidence implies — it is a projection, never a measurement.", rigor:"Model projection — not evidence" }
 };
 
 /* ---------------------------------------------------------------------------
@@ -101,8 +102,8 @@ const READING_KINDS = {
 --------------------------------------------------------------------------- */
 const FEEDER_META = {
   lab: {
-    short:"Lab-fed", icon:"🔧", label:"The lab or community generates this directly",
-    plain:"Your lab already produces this in its normal week — attendance sheets, repair logs, machine hours, its own surveys. No new instrument needed, no permission to ask for.",
+    short:"Hub-fed", icon:"🔧", label:"The hub — lab plus its community — produces this directly",
+    plain:"Your hub already produces this in its normal week — attendance sheets, repair logs, machine hours, sensor campaigns, its own surveys. No new instrument needed, no permission to ask for. One discipline: hub records enter as Community evidence for the district the hub anchors — they are never a proxy for city-scale throughput. The district is the measurement unit; the hub is who measures.",
     accent:"var(--green-600)"
   },
   mixed: {
@@ -125,8 +126,9 @@ const FEEDER_META = {
 /* ---------------------------------------------------------------------------
    DATA SOVEREIGNTY BY SCALE — the single most consequential empirical finding
    behind this whole dashboard.
-   Derived by auditing all ~95–108 indicators of Vivanco's Detailed Metrics
-   sheet [B] and classifying each by who can actually produce it.
+   Derived by auditing all ~95–108 indicators of the Full Stack Metrics
+   Framework's Detailed Metrics sheet [B] and classifying each by who can
+   actually produce it.
    The result: the Fab City network holds real data sovereignty over exactly
    one horizontal strip — Community — and almost nothing above it.
    This is why the workshop exercise is built on the Community row.
@@ -150,7 +152,7 @@ const SOVEREIGNTY = {
 
 /* ---------------------------------------------------------------------------
    NETWORK-OWN DATA SOURCES — the answer to the sovereignty problem above.
-   These are NOT in Vivanco's original theoretical sheet. They come from the
+   These are NOT in the framework's original theoretical sheet. They come from the
    Data Points Catalog, built afterwards precisely to close that gap: real,
    already-instrumentable sources the network itself owns, which feed City,
    Region and Bioregion cells with network data instead of leaving them
@@ -525,11 +527,12 @@ const METHODOLOGY = {
     rho: {
       name:"ρ (rho) — the response coefficient",
       plain:"How fast a reading turns into something actually being done. A number nobody acts on changes nothing.",
-      technical:"Action latency: the speed at which an observation at any tier produces a fitted, human-approved response at the appropriate governance tier within a pre-registered budget. ρ = 1 is perfect coupling; ρ = 0 means observations are made but never acted upon. Generations 1 and 2 have ρ implicit at 1 because their models are static; Generation 3 makes it measurable and treats it as the third axis.",
-      formula:"ρ(t) ∈ [0,1] — protocol v0, tier-weighting and council-rejection handling still open"
+      technical:"Action latency: the speed at which an observation at any tier produces a fitted, human-approved response at the appropriate governance tier within a pre-registered budget. ρ = 1 is perfect coupling; ρ = 0 means observations are made but never acted upon. Generations 1 and 2 have ρ implicit at 1 because their models are static; Generation 3 makes it measurable and treats it as the third axis. The natural measurement substrate already exists: PLANETAI's H₀-A protocol timestamps five stages per response cycle (detect → decide → fabricate → deploy → measure) into a public audit ledger.",
+      formula:"ρ(t) ∈ [0,1] — protocol v0, tier-weighting and council-rejection handling still open",
+      symbolNote:"Symbol drift, flagged: the 2026-04-28 PLANETAI decision record writes this term κ (coupling coefficient); the public surfaces — this dashboard and the exhibition console — write ρ. Same term, one symbol should be canonised."
     }
   },
-  boeing: "Set every weight to zero except Economic × Region, drop the coupling term, and compute only the self-sufficiency dimension, and the formula returns ~0.37 for Hamburg and 0.3758 for Paris — exactly what Generations 1 and 2 produced. That is the respect move: Generations 1 and 2 computed one cell, with rigour, and got the right answer for that cell. FCI 3.0 exposes the 37/100 ceiling as a projection of the full index onto its single best-instrumented cell, then adds nineteen more cells and ρ.",
+  boeing: "Set every weight to zero except Economic × Region, drop the coupling term, and compute only the self-sufficiency dimension, and the formula returns ~0.37 for Hamburg and 0.3758 for Paris — exactly what Generations 1 and 2 produced. That is the respect move: Generations 1 and 2 computed one cell, with rigour, and got the right answer for that cell. FCI 3.0 exposes the 37/100 ceiling as a projection of the full index onto its single best-instrumented cell, then adds nineteen more cells and ρ. Two equivalent encodings of that recovery circulate: this dashboard reconstructs Paris/Hamburg with DIDO unknown and ρ implicit at 1; the exhibition console encodes a CEILING archetype with DIDO = 1, ρ = 1, PITO = 0.63 so the product returns 37 directly. Same claim — the formal Hamburg worked example should fix one canonical encoding.",
   boeingPlain: "The old 37/100 score wasn't wrong. It was one cell out of twenty, measured properly. This index contains that result rather than replacing it.",
   aggregation: "Aggregation stops at the Region tier. Community → City → Region nest and add up into the score. Bioregion and Planet enter as boundary-condition observations — context and limits, never scales the index rolls up to.",
   aggregationPlain: "Neighbourhood adds into city, city adds into region. Full stop. The bioregion and the planet are limits you check yourself against, not levels you climb — because no government sits at those scales that could act fast enough for the number to mean anything. That speed is ρ.",
@@ -538,11 +541,55 @@ const METHODOLOGY = {
     "Twelve of twenty cells are meaningfully populated. The Region tier and the Governance × Bioregion / × Region cells are the thinnest — either populated honestly with mock-pill discipline or named as deferred research deliverables.",
     "The 4×5 → PITO/DIDO weight table is v0. Three cells deserve sharpened argument before the canonical weights harden: Economic × Bioregion (0.8/0.2), Environmental × Community (0.5/0.5), Economic × Community (0.3/0.7).",
     "The Boeing numerical recovery is sketched, not formal. A worked Hamburg example on public NACE/COICOP data would close the loop and pre-empt the most predictable reviewer objection.",
-    "The ρ measurement protocol is a v0 note. Tier-weighting and council-rejection handling are open.",
-    "Vivanco's matrix is a working paper plus a 2025 doctoral thesis, not yet peer-reviewed in its own right; a bioregional peer-matching companion paper would fix that.",
+    "The ρ measurement protocol is a v0 note. Tier-weighting and council-rejection handling are open — but the measurement substrate exists: PLANETAI's H₀-A ledger timestamps exactly the cycle ρ describes. Defining ρ over that ledger is the shortest path to v1.",
+    "The response term has two symbols in circulation: κ in the locked 2026-04-28 decision record, ρ on the public surfaces (this dashboard, the exhibition console). One should be canonised in a superseding decision record.",
+    "Three PITO/DIDO weight tables now exist: the FCI 3.0 site's v0 (12 cells), this dashboard's documented+reconstructed set, and the exhibition console's full 20-cell table — they agree on only 5 of 20 cells. A versioned, machine-readable weights.json (started in data/weights.json here) needs to become the single source all surfaces consume.",
+    "The Full Stack Metrics Framework [Vivanco 2024] is a working paper plus a 2025 doctoral thesis, not yet peer-reviewed in its own right; a bioregional peer-matching companion paper would fix that.",
     "LOCAL SHIFT® and LOCAL FOOTPRINT® Nature are proprietary Utopies products. The published methodology and the 2018 numbers are cited; reproducibility of the simulator outputs is not claimed.",
     "A 2025 review of ~1,000 Fab Lab impact studies (Peuckert et al.) found strong quantitative evidence for learning, skills and entrepreneurship outcomes — and almost none for bioregional, place-based or knowledge-sharing layers. The upper half of this matrix is, evidentially, close to empty."
   ]
+};
+
+/* ---------------------------------------------------------------------------
+   SIM — the exhibition-console layer (fci-simulator-console, July 2026).
+   The console models a city as three axes (PITO, DIDO, ρ) projected onto the
+   20 cells through a weight table: cell = (1−PITO)·w_pito + DIDO·w_dido.
+   This dashboard adopts that projection for two disciplined uses:
+   (1) model completion — fitting the axes from MEASURED cells only and
+       rendering the dark cells as explicitly-marked 'derived' projections;
+   (2) simulation mode — the console's own behaviour, everything mock,
+       badged SIMULATION · NOT A MEASUREMENT.
+   ARCHETYPES are the console's reference presets, all mock. CEILING encodes
+   the Generation 1+2 recovery as a preset: DIDO=1, ρ=1, PITO=0.63 → FCI=37.
+   wts below is the console's own 20-cell weight table, kept for comparison —
+   it agrees with this dashboard's per-cell weights on only 5 of 20 cells,
+   which is exactly why data/weights.json exists. The dashboard's per-cell
+   weights (CELLS[key].pito/dido) remain the active set everywhere.
+--------------------------------------------------------------------------- */
+const SIM = {
+  source:"FCI 3.0 exhibition console (fci-simulator-console, July 2026)",
+  badge:"SIMULATION · NOT A MEASUREMENT",
+  archetypes:[
+    { id:"bcn",     name:"BCN",     pito:0.62, dido:0.55, rho:0.40, label:"Barcelona-like · mock ○" },
+    { id:"bos",     name:"BOS",     pito:0.70, dido:0.45, rho:0.25, label:"Boston-like · mock ○" },
+    { id:"scl",     name:"SCL",     pito:0.55, dido:0.35, rho:0.30, label:"Santiago-like · mock ○" },
+    { id:"bali",    name:"BALI",    pito:0.60, dido:0.40, rho:0.35, label:"Bali-like · mock ○" },
+    { id:"ceiling", name:"CEILING", pito:0.63, dido:1.00, rho:1.00, label:"The ceiling city (Gen 1+2, ρ=1) · mock ○" }
+  ],
+  /* console's weight table, [pito, dido] per scale in SCALES order —
+     for the divergence table only, NOT the active weights */
+  wts:{
+    environmental:[[0.5,0.5],[0.7,0.3],[0.8,0.2],[0.9,0.1],[1.0,0.0]],
+    social:       [[0.0,1.0],[0.1,0.9],[0.1,0.9],[0.1,0.9],[0.2,0.8]],
+    economic:     [[0.3,0.7],[0.5,0.5],[0.6,0.4],[0.8,0.2],[1.0,0.0]],
+    governance:   [[0.0,1.0],[0.0,1.0],[0.0,1.0],[0.0,1.0],[0.0,1.0]]
+  },
+  narrative:{
+    /* one plain sentence generated from the fitted/simulated state */
+    pito:{ hi:"a linear-extractive metabolism", mid:"a metabolism still leaning on imports", lo:"a metabolism largely fed from its own territory" },
+    dido:{ hi:"with real productive and sensing capacity", mid:"with flickers of capacity", lo:"with almost no capacity of its own" },
+    rho:{ hi:"— and readings become action fast.", mid:"— and the wire between seeing and doing is patchy.", lo:"— and the wire between seeing and doing is mostly missing.", none:"— and nobody has measured how fast seeing becomes doing." }
+  }
 };
 
 const FULL_STACK_LAYERS = [
