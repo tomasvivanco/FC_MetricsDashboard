@@ -1293,6 +1293,7 @@ function renderReadingBox(key){
       <div class="read-row" style="margin-top:0.2rem;">
         <button type="button" class="btn" data-act="test-live" data-key="${esc(key)}">Test &amp; read now</button>
         <button type="button" class="btn primary" data-act="save-live" data-key="${esc(key)}">Save live feed</button>
+        ${key==='environmental:community' ? `<button type="button" class="btn" data-act="mesh-defaults" data-key="${esc(key)}" title="scripts/meshtastic_bridge.py serves this on localhost">📡 Use Meshtastic bridge</button>` : ''}
       </div>
       <div class="status-line" id="liveStatus-${sid}"></div>
     </div>
@@ -1406,6 +1407,18 @@ function wireReadingBox(key){
   $$('#cellDetailBody [data-act]').forEach(b=> b.addEventListener('click', ()=>{
     const k = b.dataset.key, act = b.dataset.act;
     if(act==='clear'){ LS.delRead(k); showCell(k); buildMatrix(); renderBanner(); return; }
+
+    if(act==='mesh-defaults'){
+      $('#liveUrl-'+sid).value = 'http://localhost:8787/reading.json';
+      $('#livePath-'+sid).value = 'uptime_24h_pct';
+      $('#liveMin-'+sid).value = '0';
+      $('#liveMax-'+sid).value = '100';
+      $('#liveDir-'+sid).value = 'dido';
+      const st = $('#liveStatus-'+sid);
+      st.textContent = 'Bridge defaults filled. Start the bridge (python3 scripts/meshtastic_bridge.py …), then "Test & read now".';
+      st.className = 'status-line';
+      return;
+    }
 
     if(act==='save-est'){
       const v = parseFloat($('#estSlider-'+sid).value);
