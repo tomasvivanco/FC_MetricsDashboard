@@ -348,6 +348,79 @@ def _ingest_serial_packet(packet, node_filter=None):
         _log(f"· nodeinfo: {nid} is '{u.get('longName') or '?'}'")
 
 
+def diagnose(args, enable_env=False):
+    """Read the plugged node's real state over USB and say plainly why
+    environment data is or is not flowing. With enable_env=True, switch the
+    telemetry module on (interval 120 s) and save it to the device."""
+    try:
+        from meshtastic.serial_interface import SerialInterface
+    except ImportError:
+        sys.exit("Needs the official library. Run once:\n\n    pip3 install meshtastic\n")
+    print("Connecting over USB…")
+    dev = None if args.serial in (None, "auto") else args.serial
+    iface = SerialInterface(devPath=dev)
+    time.sleep(2)
+
+    try:
+        me = iface.getMyNodeInfo() or {}
+        u = me.get("user") or {}
+        print(f"\nPlugged node : {u.get('longName') or '?'} ({u.get('id') or '?'}) · hw {u.get('hwModel') or '?'}")
+    except Exception as e:
+        print(f"Could not read node info: {e}")
+
+    print("\nMesh node DB (what the gateway has heard):")
+    any_env = False
+    try:
+        now = time.time()
+        for nid, n in (iface.nodes or {}).items():
+            uu = n.get("user") or {}
+            age = (now - n["lastHeard"]) / 60 if n.get("lastHeard") else None
+            env = n.get("environmentMetrics")
+            if env:
+                any_env = True
+            print(f"  {uu.get('id') or nid:<12} {uu.get('longName') or '?':<24} "
+                  f"last heard {age:.0f} min ago" if age is not None else
+                  f"  {uu.get('id') or nid:<12} {uu.get('longName') or '?':<24} never heard", end="")
+            print(f" · env metrics: {'YES ' + str(env) if env else 'none seen'}")
+    except Exception as e:
+        print(f"  could not list nodes: {e}")
+
+    print("\nTelemetry module config on the plugged node:")
+    tel = None
+    try:
+        tel = iface.localNode.moduleConfig.telemetry
+        print("  " + str(tel).strip().replace("\n", "\n  "))
+        enabled = bool(getattr(tel, "environment_measurement_enabled", False))
+        interval = int(getattr(tel, "environment_update_interval", 0) or 0)
+        print(f"\n  → environment measurement: {'ENABLED' if enabled else '*** DISABLED ***'}"
+              f" · interval {interval or 'default (1800)'} s")
+        if not enabled:
+            print("  This is why no data flows. Fix: run with --enable-env, or in the app:")
+            print("  Module config → Telemetry → Environment measurement enabled ✓")
+    except Exception as e:
+        print(f"  could not read module config ({e}) — check it in the app instead.")
+
+    if enable_env and tel is not None:
+        try:
+            tel.environment_measurement_enabled = True
+            tel.environment_update_interval = 120
+            iface.localNode.writeConfig("telemetry")
+            print("\n✔ Wrote config: environment measurement ENABLED, interval 120 s.")
+            print("  The node saves and may reboot itself; give it ~1 minute,")
+            print("  then start the bridge:  python3 scripts/meshtastic_bridge.py --serial")
+        except Exception as e:
+            print(f"\nCould not write the config over USB ({e}) — enable it in the app.")
+    elif not any_env:
+        print("\nNo node in this mesh has ever delivered environment metrics to the gateway.")
+        print("If the sensor hangs off the plugged node: run  --enable-env  once.")
+        print("If it hangs off ANOTHER node: enable the telemetry module on that node in the app.")
+
+    try:
+        iface.close()
+    except Exception:
+        pass
+
+
 def run_serial(args, node_filter):
     try:
         from meshtastic.serial_interface import SerialInterface
@@ -751,11 +824,16 @@ def main():
     ap.add_argument("--listen-port", type=int, default=1883)
     ap.add_argument("--serial", nargs="?", const="auto", default=None, metavar="PORT",
                     help="node plugged into THIS computer via USB — reads telemetry off the port (auto-detects; needs: pip3 install meshtastic)")
+    ap.add_argument("--diagnose", action="store_true", help="read the plugged node's real config over USB and say why data is/isn't flowing")
+    ap.add_argument("--enable-env", action="store_true", help="diagnose + switch environment telemetry ON (interval 120 s) on the plugged node")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
 
     if args.selftest:
         sys.exit(selftest())
+    if args.diagnose or args.enable_env:
+        diagnose(args, enable_env=args.enable_env)
+        sys.exit(0)
 
     node_filter = set(x.strip() for x in args.node.split(",")) if args.node else None
     serve(args.http_port, active_s=args.active_window * 60)
