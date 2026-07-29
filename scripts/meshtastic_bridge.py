@@ -621,9 +621,12 @@ def main():
     if args.listen:
         run_mini_broker(args, node_filter)
         try:
-            my_ip = socket.gethostbyname(socket.gethostname())
+            probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            probe.connect(("8.8.8.8", 80))          # no packet sent — just picks the LAN interface
+            my_ip = probe.getsockname()[0]
+            probe.close()
         except Exception:
-            my_ip = "<this machine's IP>"
+            my_ip = "the IP from: ipconfig getifaddr en0"
         mqtt_line = f"mini-broker on 0.0.0.0:{args.listen_port} — set the gateway's MQTT server address to {my_ip} (JSON output enabled)"
     else:
         run_mqtt(args, node_filter)
