@@ -249,18 +249,39 @@ def handle_mqtt_message(topic, payload_bytes, node_filter=None):
             _log(f"· position for {nid}: {lat/1e7:.5f}, {lng/1e7:.5f}")
 
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_STATIC = {                       # the bridge also serves the dashboard itself —
+    "/index.html": "text/html; charset=utf-8",          # same origin as the data,
+    "/assets/data.js": "text/javascript; charset=utf-8" # so no CORS, one URL to open
+}
+
+
 class Handler(BaseHTTPRequestHandler):
     active_s = 3600
 
-    def do_GET(self):
-        body = json.dumps(STORE.snapshot(active_s=self.active_s), indent=1).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
+    def _send(self, code, ctype, body):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def do_GET(self):
+        path = self.path.split("?")[0]
+        if path in ("/reading.json", "/reading"):
+            body = json.dumps(STORE.snapshot(active_s=self.active_s), indent=1).encode()
+            return self._send(200, "application/json", body)
+        if path == "/":
+            path = "/index.html"
+        if path in _STATIC:
+            try:
+                with open(os.path.join(REPO_ROOT, path.lstrip("/")), "rb") as fh:
+                    return self._send(200, _STATIC[path], fh.read())
+            except OSError:
+                pass
+        self._send(404, "application/json", b'{"error":"not found - use /reading.json or /"}')
 
     def log_message(self, *a):
         pass
@@ -568,6 +589,10 @@ def selftest():
     same = (got["sensors_connected"] == fresh["sensors_connected"]
             and len(got["sensors"]) == len(fresh["sensors"]) == 3)   # 2 fakes + 1 via mini-broker
     print(("PASS" if same else "FAIL") + ": HTTP endpoint serves the same picture")
+    html = urllib.request.urlopen("http://127.0.0.1:8787/").read()
+    okhtml = b"Fab City Index" in html and b"assets/data.js" in html
+    print(("PASS" if okhtml else "FAIL") + ": / serves the dashboard itself (same origin as the data)")
+    same = same and okhtml
     httpd.shutdown()
     return 0 if (ok and same) else 1
 
@@ -605,8 +630,9 @@ def main():
         mqtt_line = f"{args.broker}:{args.port}  topic {args.topic}"
     print(f"""
 Bridge running.
-  MQTT     : {mqtt_line}""" + (f"  nodes {args.node}" if args.node else "  (all nodes on the mesh)") + f"""
-  Endpoint : http://localhost:{args.http_port}/reading.json
+  MQTT      : {mqtt_line}""" + (f"  nodes {args.node}" if args.node else "  (all nodes on the mesh)") + f"""
+  Dashboard : http://localhost:{args.http_port}/          ← open this in the browser
+  Data      : http://localhost:{args.http_port}/reading.json
 
 Any new sensor that joins the same mesh appears automatically.
 Dashboard → Environmental × Community → Attach a reading → Live feed:
