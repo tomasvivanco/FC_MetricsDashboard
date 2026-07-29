@@ -97,27 +97,40 @@ Decidim and others) as the honest route upward.
 ```
 .
 ├── index.html                  The dashboard. Single file, no build step.
+├── LICENSE                     Apache 2.0 — aligned with the PLANETAI stack.
 ├── assets/
-│   └── data.js                 The whole data model: 20 cells, 51 indicators,
-│                               methodology, sovereignty audit, workshop script.
+│   └── data.js                 The whole data model: 20 cells, 53 indicators,
+│                               methodology, sovereignty audit, SIM layer, workshop script.
 ├── context/                    Everything needed to pick this up cold.
 │   ├── README.md               Start here if you are new to the project.
 │   ├── 01-project-brief.md     What this is, who it is for, decisions taken.
 │   ├── 02-methodology.md       FCI 3.0: formula, weights, aggregation, ρ.
 │   ├── 03-full-stack.md        Full Stack Metrics Framework: 7 layers, 5 scales, 4 pillars.
 │   ├── 04-sovereignty-audit.md Who can produce which number, and the counts.
-│   ├── 05-data-model.md        Every cell and indicator, with units and methods.
+│   ├── 05-data-model.md        Every cell and indicator, with units and methods. Generated.
 │   ├── 06-workshop-ws3.md      The workshop, and how the dashboard serves it.
+│   ├── 07-professionalisation-roadmap.md  Every gap to production grade, prioritised.
+│   ├── decisions/              Decision records (PLANETAI format): proposed → locked.
 │   └── sources/                Original documents (papers, deck, planilla).
-├── data/                       Where workshop teams put their readings.
+├── data/                       Where readings live and enter.
 │   ├── README.md               How to submit, in five steps.
-│   ├── template.csv            Blank, correct columns.
-│   ├── example-filled.csv      Four worked rows.
+│   ├── template.csv            Blank, correct columns (incl. schema_version).
+│   ├── example-filled.csv      Worked rows.
 │   ├── schema.json             Machine-readable schema + valid cell keys.
+│   ├── weights.json            The weight table, machine-readable, three sources
+│   │                           side by side. Generated — do not edit by hand.
+│   ├── connectors.yaml         This surface's connector manifest (network convention).
+│   ├── snapshots/              Dated JSON from the scheduled fetch. Git = ledger.
 │   └── submissions/            Team CSVs land here.
 │       └── index.json          Manifest the dashboard reads.
-└── scripts/
-    └── validate_submission.py  Checks a CSV against the same rules the dashboard uses.
+├── scripts/
+│   ├── validate_submission.py  Checks a CSV against the same rules the dashboard uses.
+│   ├── fetch_snapshots.js      Fetches fablabs.io + Smart Citizen → data/snapshots/.
+│   ├── gen_weights_json.js     Regenerates data/weights.json from data.js.
+│   ├── gen_datamodel_doc.js    Regenerates context/05-data-model.md from data.js.
+│   └── smoke_test.js           Headless boot + model-math test. Run before committing.
+└── .github/workflows/
+    └── snapshots.yml           Weekly scheduled fetch, commits snapshots.
 ```
 
 ---
