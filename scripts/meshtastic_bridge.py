@@ -206,10 +206,24 @@ def node_id_of(msg):
     return str(s) if s else "?"
 
 
+_NONJSON_WARNED = set()
+_QUIET = False
+
+
+def _log(s):
+    if not _QUIET:
+        print(time.strftime("%H:%M:%S ") + s, flush=True)
+
+
 def handle_mqtt_message(topic, payload_bytes, node_filter=None):
     try:
         msg = json.loads(payload_bytes.decode("utf-8", "replace"))
     except Exception:
+        base = topic.rsplit("/", 1)[0]
+        if base not in _NONJSON_WARNED:
+            _NONJSON_WARNED.add(base)
+            _log(f"⚠ non-JSON packet on {topic} — that is the encrypted protobuf feed. "
+                 f"If this is your gateway, enable 'JSON output enabled' in Module config → MQTT and reboot the node.")
         return
     nid = node_id_of(msg)
     if node_filter and nid not in node_filter:
@@ -218,14 +232,21 @@ def handle_mqtt_message(topic, payload_bytes, node_filter=None):
     if t == "telemetry":
         env = {out: round(float(p[k]), 2) for k, out in ENV_KEYS.items()
                if isinstance(p.get(k), (int, float))}
-        if env:                                   # ignore device-metrics-only telemetry
+        if env:
             STORE.record_telemetry(nid, env)
+            _log(f"✓ environment telemetry from {nid}: " +
+                 " ".join(f"{k}={v}" for k, v in env.items()))
+        else:
+            _log(f"· telemetry from {nid} has no environment metrics (battery/airtime only) — "
+                 f"check Module config → Telemetry → environment measurement enabled, and that the sensor is detected")
     elif t == "nodeinfo":
         STORE.record_nodeinfo(p.get("id") or nid, p.get("longname"), p.get("shortname"))
+        _log(f"· nodeinfo: {nid} is '{p.get('longname') or '?'}'")
     elif t == "position":
         lat, lng = p.get("latitude_i"), p.get("longitude_i")
         if isinstance(lat, int) and isinstance(lng, int) and (lat or lng):
             STORE.record_position(nid, lat / 1e7, lng / 1e7)
+            _log(f"· position for {nid}: {lat/1e7:.5f}, {lng/1e7:.5f}")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -462,6 +483,8 @@ def run_mqtt(args, node_filter):
 
 
 def selftest():
+    global _QUIET
+    _QUIET = True
     """Two fake sensors + a router node; checks counts, averages, list."""
     global STORE
     STORE = TelemetryStore.__new__(TelemetryStore)
