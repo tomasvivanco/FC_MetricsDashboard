@@ -381,6 +381,31 @@ def run_serial(args, node_filter):
              f"(default 30 min — lower it in Module config → Telemetry to see data sooner).")
     except Exception:
         pass
+
+    # Don't just wait for the interval: actively request environment metrics
+    # from the mesh now and every 5 minutes. API names vary across library
+    # versions, so try the known signatures and stay quiet if none exists.
+    def poll_telemetry():
+        while True:
+            asked = False
+            for kwargs in (
+                {"destinationId": "^all", "wantResponse": True, "telemetryType": "environment_metrics"},
+                {"destinationId": "^all", "wantResponse": True},
+                {},
+            ):
+                try:
+                    iface.sendTelemetry(**kwargs)
+                    asked = True
+                    break
+                except TypeError:
+                    continue
+                except Exception:
+                    break
+            if asked:
+                _log("· requested environment telemetry from the mesh")
+            time.sleep(300)
+
+    threading.Thread(target=poll_telemetry, daemon=True).start()
     return iface
 
 
