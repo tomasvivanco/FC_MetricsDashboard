@@ -98,8 +98,9 @@ sensors are connected and the running averages** (temperature · humidity · pre
 cell for the full list — each sensor's name (from nodeinfo), its latest values, its map position,
 last-seen time and its own 24 h uptime, plus a *Refresh from bridge* button. **Adding sensors needs
 no configuration**: any node that joins the same mesh and emits telemetry appears on the next
-refresh (`--node '!id1,!id2'` restricts to an explicit list). `pip install paho-mqtt` is the only
-dependency; `--selftest` verifies the arithmetic offline.
+refresh (`--node '!id1,!id2'` restricts to an explicit list). Zero dependencies — pure Python 3
+stdlib, with its own minimal MQTT client (paho-mqtt is used if present); `--selftest` verifies
+everything offline.
 
 ---
 

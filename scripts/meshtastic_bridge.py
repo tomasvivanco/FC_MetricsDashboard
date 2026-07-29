@@ -23,7 +23,10 @@ Adding more sensors needs nothing here: any node that joins the same
 mesh (same channel/region) and emits telemetry appears on the next
 refresh. Use --node to restrict to an explicit comma-separated list.
 
-Requirements:  pip install paho-mqtt
+Requirements: none — pure Python 3 standard library. It ships its own
+minimal MQTT 3.1.1 client (subscribe/QoS-0). If paho-mqtt happens to be
+installed (pip3 install paho-mqtt) it is used instead, but nothing needs
+installing to run this.
 Gateway: MQTT module enabled with JSON output. Telemetry topics look
 like  msh/<region>/2/json/<channel>/!<gateway-id>
 
@@ -49,6 +52,10 @@ the dashboard may call it from file://, localhost or GitHub Pages).
 import argparse
 import json
 import os
+import random
+import socket
+import ssl
+import struct
 import sys
 import threading
 import time
@@ -245,11 +252,122 @@ def serve(port, active_s=3600):
     return httpd
 
 
+"""── Minimal MQTT 3.1.1 client — stdlib only, subscribe/QoS-0 ─────────────
+Enough protocol for this job: CONNECT, SUBSCRIBE, receive PUBLISH,
+answer keepalive with PINGREQ, reconnect with backoff. Used when
+paho-mqtt is not installed, so the bridge runs on a bare macOS python3."""
+
+
+def _enc_len(n):
+    out = b""
+    while True:
+        d = n % 128
+        n //= 128
+        out += bytes([d | (0x80 if n else 0)])
+        if not n:
+            return out
+
+
+def _enc_str(s):
+    b = s.encode("utf-8")
+    return struct.pack(">H", len(b)) + b
+
+
+class _SockReader:
+    """Buffered exact-read over a socket (or any object with .recv)."""
+
+    def __init__(self, sock):
+        self.sock, self.buf = sock, b""
+
+    def read_exact(self, n):
+        while len(self.buf) < n:
+            chunk = self.sock.recv(4096)      # may raise socket.timeout
+            if not chunk:
+                raise ConnectionError("connection closed")
+            self.buf += chunk
+        out, self.buf = self.buf[:n], self.buf[n:]
+        return out
+
+
+def mqtt_connect_packet(client_id, user=None, password=None, keepalive=60):
+    flags = 0x02                              # clean session
+    payload = _enc_str(client_id)
+    if user is not None:
+        flags |= 0x80
+        payload += _enc_str(user)
+        if password is not None:
+            flags |= 0x40
+            payload += _enc_str(password)
+    body = _enc_str("MQTT") + bytes([4, flags]) + struct.pack(">H", keepalive) + payload
+    return bytes([0x10]) + _enc_len(len(body)) + body
+
+
+def mqtt_subscribe_packet(topic, pid=1):
+    body = struct.pack(">H", pid) + _enc_str(topic) + bytes([0])   # QoS 0
+    return bytes([0x82]) + _enc_len(len(body)) + body
+
+
+def mqtt_read_packet(reader):
+    header = reader.read_exact(1)[0]
+    mul, length = 1, 0
+    for _ in range(4):
+        b = reader.read_exact(1)[0]
+        length += (b & 0x7F) * mul
+        if not (b & 0x80):
+            break
+        mul *= 128
+    return header, reader.read_exact(length) if length else b""
+
+
+def mqtt_parse_publish(header, body):
+    qos = (header >> 1) & 0x03
+    tlen = struct.unpack(">H", body[:2])[0]
+    topic = body[2:2 + tlen].decode("utf-8", "replace")
+    i = 2 + tlen + (2 if qos else 0)          # QoS>0 carries a packet id
+    return topic, body[i:]
+
+
+def run_mqtt_builtin(args, node_filter):
+    def worker():
+        backoff = 3
+        while True:
+            try:
+                raw = socket.create_connection((args.broker, args.port), timeout=15)
+                if args.tls:
+                    raw = ssl.create_default_context().wrap_socket(raw, server_hostname=args.broker)
+                raw.settimeout(30)            # idle → time to ping
+                rd = _SockReader(raw)
+                cid = "fci-bridge-%08x" % random.getrandbits(32)
+                raw.sendall(mqtt_connect_packet(cid, args.user, args.password))
+                h, body = mqtt_read_packet(rd)
+                if h >> 4 != 2 or (len(body) > 1 and body[1] != 0):
+                    raise ConnectionError("broker refused connection (CONNACK rc=%s)" % (body[1] if len(body) > 1 else "?"))
+                raw.sendall(mqtt_subscribe_packet(args.topic))
+                print(f"MQTT connected (builtin client) — subscribed to {args.topic}")
+                backoff = 3
+                while True:
+                    try:
+                        h, body = mqtt_read_packet(rd)
+                    except socket.timeout:
+                        raw.sendall(b"\xc0\x00")          # PINGREQ
+                        continue
+                    if h >> 4 == 3:                        # PUBLISH
+                        topic, payload = mqtt_parse_publish(h, body)
+                        handle_mqtt_message(topic, payload, node_filter)
+                    # CONNACK/SUBACK/PINGRESP and the rest: nothing to do
+            except Exception as e:
+                print(f"MQTT connection lost ({e}) — retrying in {backoff}s")
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def run_mqtt(args, node_filter):
     try:
         import paho.mqtt.client as mqtt
     except ImportError:
-        sys.exit("paho-mqtt is not installed. Run:  pip install paho-mqtt")
+        return run_mqtt_builtin(args, node_filter)
 
     def on_connect(client, userdata, flags, rc, properties=None):
         print(f"MQTT connected (rc={rc}) — subscribing to {args.topic}")
@@ -311,6 +429,25 @@ def selftest():
         ("mesh uptime ~25%", abs(s["uptime_24h_pct"] - 25.0) < 0.5),
         ("per-node uptime present", all("uptime_24h_pct" in x for x in s["sensors"])),
     ]
+    # builtin MQTT codec, offline
+    class _Fake:
+        def __init__(self, data): self.data = data
+        def recv(self, n):
+            out, self.data = self.data[:n], self.data[n:]
+            return out
+    con = mqtt_connect_packet("cid", "meshdev", "large4cats")
+    checks.append(("CONNECT packet well-formed",
+                   con[0] == 0x10 and b"MQTT" in con and b"meshdev" in con and b"large4cats" in con))
+    checks.append(("remaining-length encoding", _enc_len(0) == b"\x00" and _enc_len(321) == b"\xc1\x02"))
+    payload = json.dumps({"from": 1, "type": "telemetry", "payload": {"temperature": 20.0}}).encode()
+    pub = bytes([0x30]) + _enc_len(2 + 5 + len(payload)) + _enc_str("msh/x") + payload
+    h, body = mqtt_read_packet(_SockReader(_Fake(pub)))
+    topic, got = mqtt_parse_publish(h, body)
+    checks.append(("PUBLISH round-trip parse", h >> 4 == 3 and topic == "msh/x" and got == payload))
+    pub1 = bytes([0x32]) + _enc_len(2 + 5 + 2 + len(payload)) + _enc_str("msh/x") + b"\x00\x07" + payload
+    h1, body1 = mqtt_read_packet(_SockReader(_Fake(pub1)))
+    checks.append(("QoS-1 PUBLISH skips the packet id", mqtt_parse_publish(h1, body1)[1] == payload))
+
     ok = True
     for label, passed in checks:
         print(("PASS" if passed else "FAIL") + ": " + label)
