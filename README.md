@@ -93,7 +93,12 @@ Decidim, your own Meshtastic sensor mesh, and others) as the honest route upward
 **Live from your own hardware:** `scripts/meshtastic_bridge.py` subscribes to your Meshtastic
 gateway's MQTT JSON feed and serves `http://localhost:8787/reading.json`; point the
 Environmental × Community cell's Live-feed panel at it (path `uptime_24h_pct`, min 0, max 100,
-higher = better) and the cell updates from your own mesh. `pip install paho-mqtt` is the only
+higher = better) and the cell updates from your own mesh. The cell face then shows **how many
+sensors are connected and the running averages** (temperature · humidity · pressure); click the
+cell for the full list — each sensor's name (from nodeinfo), its latest values, its map position,
+last-seen time and its own 24 h uptime, plus a *Refresh from bridge* button. **Adding sensors needs
+no configuration**: any node that joins the same mesh and emits telemetry appears on the next
+refresh (`--node '!id1,!id2'` restricts to an explicit list). `pip install paho-mqtt` is the only
 dependency; `--selftest` verifies the arithmetic offline.
 
 ---

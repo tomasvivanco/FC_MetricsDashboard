@@ -102,6 +102,9 @@ table.matrix th{font-size:12px; font-weight:500; color:var(--text-secondary); te
 }
 .kind-derived{background:var(--purple-50); color:var(--purple-800);}
 .cell-delta{font-family:var(--font-mono); font-size:9px; color:var(--purple-800);}
+.cell-mesh{font-size:9.5px; color:var(--text-secondary); display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden;}
+.mesh-dot{display:inline-block; flex:none; width:7px; height:7px; border-radius:50%; background:var(--green-600);}
+.mesh-dot.off{background:var(--text-muted);}
 
 /* ---------- FCI BANNER / MODEL / SIM ---------- */
 .fci-banner .formula-line{font-family:var(--font-mono); font-size:16px; text-align:center; margin:0.2rem 0 0.6rem;}
@@ -1073,6 +1076,7 @@ function buildMatrix(){
         <span class="cell-kind kind-${kind==='none'?'none':kind}">${esc(kindLbl)}</span>
         <span class="cell-title">${esc(cellLabel(key))}</span>
         ${scoreHtml}
+        ${r && r.mesh ? `<span class="cell-mesh" title="Click the cell for the full sensor list"><span class="mesh-dot ${r.mesh.connected?'':'off'}"></span>${r.mesh.connected} sensor${r.mesh.connected===1?'':'s'}${fmtMeshAvg(r.mesh.averages)?' · '+esc(fmtMeshAvg(r.mesh.averages)):''}</span>` : ''}
         <span class="cell-foot">
           <span class="cell-w">P ${c.pito.toFixed(2)} · D ${c.dido.toFixed(2)}</span>
           ${delta!==null
@@ -1139,15 +1143,70 @@ function showCell(key){
       ${indRows}
     </table></div>
 
+    ${ renderMeshPanel(key) }
     ${ modelInfoFor(key) }
     ${ LS.wsOn() ? renderWsCard(key) : (MODE.get()==='sim' ? '' : renderReadingBox(key)) }
   `;
   if(LS.wsOn()) wireWsCard(key); else if(MODE.get()!=='sim') wireReadingBox(key);
+  wireMeshPanel(key);
   const panel = $('#cellDetail');
   panel.classList.add('show');
   if(typeof panel.scrollIntoView === 'function'){ try{ panel.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){} }
 }
 $('#closeDetail').addEventListener('click', ()=> $('#cellDetail').classList.remove('show'));
+
+/* ---- mesh sensor list inside the cell panel ----
+   Rendered when the cell's live reading carries a `mesh` block (the
+   Meshtastic bridge shape): one row per sensor — name, latest environment
+   values, position, last seen, per-node uptime. New sensors joining the
+   same mesh appear on the next refresh; nothing to configure. */
+function renderMeshPanel(key){
+  const r = LS.read(key);
+  if(!r || !r.mesh || LS.wsOn()) return '';
+  const m = r.mesh;
+  const num = (x,d,u) => typeof x==='number' ? x.toFixed(d)+u : '—';
+  const rows = (m.sensors||[]).map(s=>{
+    const e = s.last || {};
+    const pos = s.position
+      ? `<a href="https://www.openstreetmap.org/?mlat=${s.position.lat}&mlon=${s.position.lng}#map=17/${s.position.lat}/${s.position.lng}" target="_blank" rel="noopener">${s.position.lat.toFixed(5)}, ${s.position.lng.toFixed(5)}</a>`
+      : '<span class="tiny">no fix</span>';
+    return `<tr>
+      <td><span class="mesh-dot ${s.connected?'':'off'}" title="${s.connected?'reporting now':'quiet — outside the active window'}"></span>
+          <strong style="font-weight:500;">${esc(s.name||s.node)}</strong>${s.short?` <span class="tiny">(${esc(s.short)})</span>`:''}
+          <div class="tiny"><code>${esc(s.node)}</code></div></td>
+      <td>${num(e.temperature_c,1,' °C')}</td>
+      <td>${num(e.relative_humidity_pct,0,' %')}</td>
+      <td>${num(e.barometric_pressure_hpa,0,' hPa')}</td>
+      <td class="tiny">${pos}</td>
+      <td class="tiny">${esc(s.last_seen||'—')}</td>
+      <td>${num(s.uptime_24h_pct,1,' %')}</td>
+    </tr>`;
+  }).join('');
+  return `
+  <div class="read-box" id="meshPanel">
+    <h3>📡 Mesh sensors — ${m.connected} connected now · ${m.seen} seen in 24 h</h3>
+    <p class="tiny" style="margin:0 0 0.6rem;">
+      Averages across connected sensors: <strong style="font-weight:500;">${esc(fmtMeshAvg(m.averages,true)||'—')}</strong>
+      · updated ${esc(m.updated)}.
+      The averages are context; the cell's reading is the sensing <em>uptime</em> — whether the neighbourhood knows its own air.
+      Any new sensor that joins the same Meshtastic mesh appears here on the next refresh — nothing to configure.</p>
+    <div class="matrix-scroll"><table class="simple">
+      <tr><th>Sensor</th><th>Temp</th><th>Humidity</th><th>Pressure</th><th>Position</th><th>Last seen</th><th>Uptime 24 h</th></tr>
+      ${rows || '<tr><td colspan="7" class="tiny">No sensors reported yet — is the bridge running and the gateway publishing JSON?</td></tr>'}
+    </table></div>
+    ${MODE.get()==='sim' ? '' : `<div style="margin-top:0.6rem; display:flex; gap:8px; align-items:center;">
+      <button type="button" class="btn" id="meshRefresh">Refresh from bridge</button>
+      <span class="status-line" id="meshStatus" style="margin:0;"></span>
+    </div>`}
+  </div>`;
+}
+function wireMeshPanel(key){
+  const b = $('#meshRefresh'); if(!b) return;
+  b.addEventListener('click', ()=>{
+    const r = LS.read(key) || {};
+    liveFetch(key, {url:r.url, path:r.path, min:r.min, max:r.max, dir:r.dir}, $('#meshStatus'), ()=>showCell(key));
+  });
+}
 
 /* Model context inside the cell panel: what the projection says about this
    cell, and — when a real reading exists — the Δ residual against it. */
@@ -1285,6 +1344,48 @@ function normalise(raw, min, max, dir){
   return dir === 'pito' ? 1 - t : t;
 }
 
+/* ---- mesh-aware live fetching (Meshtastic bridge et al.) ----
+   If a live endpoint returns a `sensors` array (the bridge's shape), the
+   per-sensor picture rides along with the reading: count, averages, and
+   the full list with names, positions and last values. */
+function meshFromJson(json){
+  if(!json || !Array.isArray(json.sensors)) return null;
+  return {
+    connected: json.sensors_connected || 0,
+    seen: json.sensors_seen_24h != null ? json.sensors_seen_24h : json.sensors.length,
+    averages: json.averages || {},
+    sensors: json.sensors,
+    updated: json.updated_at || new Date().toISOString()
+  };
+}
+function fmtMeshAvg(a, full){
+  if(!a) return '';
+  const parts = [];
+  if(typeof a.temperature_c === 'number') parts.push(a.temperature_c.toFixed(1) + ' °C');
+  if(typeof a.relative_humidity_pct === 'number') parts.push(a.relative_humidity_pct.toFixed(0) + ' % RH');
+  if(full && typeof a.barometric_pressure_hpa === 'number') parts.push(a.barometric_pressure_hpa.toFixed(0) + ' hPa');
+  return parts.join(' · ');
+}
+function liveFetch(k, cfg, st, after){
+  if(!cfg.url){ if(st){ st.textContent='No endpoint saved for this reading.'; st.className='status-line err'; } return; }
+  if(st){ st.textContent='Calling…'; st.className='status-line'; }
+  fetch(cfg.url,{mode:'cors'}).then(r=>r.json()).then(json=>{
+    let v = json; if(cfg.path) cfg.path.split('.').forEach(p=>{ if(v!=null) v=v[p]; });
+    const score = normalise(v, cfg.min, cfg.max, cfg.dir);
+    if(score===null){ if(st){ st.textContent='Read '+JSON.stringify(v)+' but could not scale it — check min/max.'; st.className='status-line err'; } return; }
+    const prev = LS.read(k) || {};
+    LS.setRead(k, Object.assign({}, prev, {
+      kind:'live', score, url:cfg.url, path:cfg.path, min:cfg.min, max:cfg.max, dir:cfg.dir,
+      value:v, mesh:meshFromJson(json), lastFetch:new Date().toISOString()
+    }));
+    if(st){ st.textContent='Read '+JSON.stringify(v)+' → normalised '+score.toFixed(2)+'. Saved.'; st.className='status-line ok'; }
+    buildMatrix(); renderBanner();
+    if(after) after();
+  }).catch(()=>{
+    if(st){ st.textContent='Could not reach this endpoint from the browser (CORS or network, or the bridge is not running). You can still save it — a server-side fetch will pick it up.'; st.className='status-line err'; }
+  });
+}
+
 function wireReadingBox(key){
   const sid = safeId(key);
   const tabs = $$('#rt-'+sid+' button');
@@ -1331,22 +1432,11 @@ function wireReadingBox(key){
       const min = $('#liveMin-'+sid).value, max = $('#liveMax-'+sid).value, dir = $('#liveDir-'+sid).value;
       if(!url){ st.textContent='Enter an endpoint first.'; st.className='status-line err'; return; }
       if(act==='save-live'){
-        const score = normalise(0, min, max, dir); // validate range only
-        LS.setRead(k, { kind:'live', score: typeof LS.read(k)?.score==='number'?LS.read(k).score:0.5, url, path, min, max, dir, savedAt:new Date().toISOString().slice(0,10) });
+        const prev = LS.read(k) || {};
+        LS.setRead(k, Object.assign({}, prev, { kind:'live', score: typeof prev.score==='number'?prev.score:0.5, url, path, min, max, dir, savedAt:new Date().toISOString().slice(0,10) }));
         showCell(k); buildMatrix(); renderBanner(); return;
       }
-      st.textContent='Calling…'; st.className='status-line';
-      fetch(url,{mode:'cors'}).then(r=>r.json()).then(json=>{
-        let v = json; if(path) path.split('.').forEach(p=>{ if(v!=null) v=v[p]; });
-        const score = normalise(v, min, max, dir);
-        if(score===null){ st.textContent='Read '+JSON.stringify(v)+' but could not scale it — check min/max.'; st.className='status-line err'; return; }
-        LS.setRead(k, { kind:'live', score, url, path, min, max, dir, value:v, lastFetch:new Date().toISOString() });
-        st.textContent='Read '+JSON.stringify(v)+' → normalised '+score.toFixed(2)+'. Saved.'; st.className='status-line ok';
-        buildMatrix(); renderBanner();
-      }).catch(()=>{
-        st.textContent='Could not reach this endpoint from the browser (CORS or network). You can still save it — a server-side fetch will pick it up.';
-        st.className='status-line err';
-      });
+      liveFetch(k, {url, path, min, max, dir}, st, ()=>showCell(k));
     }
   }));
 }

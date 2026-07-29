@@ -1,50 +1,49 @@
 #!/usr/bin/env python3
 """
-Meshtastic → FCI dashboard bridge.
+Meshtastic → FCI dashboard bridge (multi-sensor).
 
-Subscribes to your Meshtastic gateway's MQTT JSON feed, keeps a rolling
-24-hour window of environment telemetry (temperature / humidity /
-pressure), and serves ONE number the dashboard can read live:
+Subscribes to your Meshtastic gateway's MQTT JSON feed and keeps, per
+node: its name (from nodeinfo), its position (from position packets),
+its latest environment telemetry (temperature / humidity / pressure)
+and its own 24-hour uptime. Serves one JSON the dashboard reads live:
 
-    uptime_24h_pct — the share of the last 24 hours (in 5-minute buckets)
-    in which your community's own mesh delivered at least one telemetry
-    reading. This feeds Environmental × Community · "Neighbourhood
-    sensing uptime" (direction: higher = better).
+  uptime_24h_pct    — share of the last 24 h (5-min buckets) in which the
+                      mesh as a whole delivered telemetry. This is the
+                      indicator: Environmental × Community ·
+                      "Neighbourhood sensing uptime" (higher = better).
+  sensors_connected — nodes with telemetry inside the active window
+                      (default 60 min).
+  averages          — mean of each environment metric across connected
+                      sensors' latest readings.
+  sensors[]         — per node: id, name, last values, lat/lng, last_seen,
+                      its own uptime. The dashboard renders this list when
+                      you click the sensor count on the cell.
 
-The raw last readings travel alongside in the same JSON, but the
-indicator is the uptime: the cell asks whether the neighbourhood KNOWS
-its own air, not what the temperature was.
+Adding more sensors needs nothing here: any node that joins the same
+mesh (same channel/region) and emits telemetry appears on the next
+refresh. Use --node to restrict to an explicit comma-separated list.
 
-Requirements
-------------
-    pip install paho-mqtt        (the only dependency)
-
-Your Meshtastic gateway node must have MQTT enabled with JSON output
-(Settings → Module config → MQTT → JSON output enabled). Telemetry then
-appears on topics like:   msh/<region>/2/json/<channel>/!<gateway-id>
+Requirements:  pip install paho-mqtt
+Gateway: MQTT module enabled with JSON output. Telemetry topics look
+like  msh/<region>/2/json/<channel>/!<gateway-id>
 
 Usage
 -----
-    # public broker, default Meshtastic credentials, all nodes:
     python3 scripts/meshtastic_bridge.py --broker mqtt.meshtastic.org \\
-        --user meshdev --password large4cats --topic 'msh/#'
+        --user meshdev --password large4cats --topic 'msh/EU_868/2/json/#'
 
-    # your own broker, one specific sensor node:
     python3 scripts/meshtastic_bridge.py --broker 192.168.1.10 \\
-        --topic 'msh/EU_868/2/json/#' --node '!a1b2c3d4'
+        --topic 'msh/#' --node '!a1b2c3d4,!deadbeef'
 
-    # then point the dashboard's Live-feed panel at:
-    #   endpoint : http://localhost:8787/reading.json
-    #   path     : uptime_24h_pct
-    #   min 0 · max 100 · direction: higher = better
+    python3 scripts/meshtastic_bridge.py --selftest      # offline check
 
-    # offline self-test (no broker, fake telemetry):
-    python3 scripts/meshtastic_bridge.py --selftest
+Dashboard → Environmental × Community → Attach a reading → Live feed:
+    endpoint http://localhost:8787/reading.json · path uptime_24h_pct
+    min 0 · max 100 · direction: higher = better
 
-State survives restarts in ~/.fci_meshtastic_state.json.
-The HTTP server sends Access-Control-Allow-Origin: * so the dashboard
-can read it whether it is opened from file://, localhost, or GitHub
-Pages (localhost is a secure context, so https pages may call it).
+State survives restarts in ~/.fci_meshtastic_state.json. The server
+sends Access-Control-Allow-Origin: * (localhost is a secure context, so
+the dashboard may call it from file://, localhost or GitHub Pages).
 """
 
 import argparse
@@ -66,13 +65,16 @@ ENV_KEYS = {
 }
 
 
+def iso(ts):
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
+
+
 class TelemetryStore:
-    """Rolling window of telemetry events. No network — unit-testable."""
+    """Rolling 24 h window of per-node telemetry. No network — testable."""
 
     def __init__(self):
         self.lock = threading.Lock()
-        self.buckets = {}           # bucket_ts -> set of node ids
-        self.last = None            # last environment reading seen
+        self.nodes = {}     # id -> {name, short, env, env_ts, pos, last_seen, buckets:set}
         self.messages = 0
         self.load()
 
@@ -81,8 +83,9 @@ class TelemetryStore:
         try:
             with open(STATE_PATH) as fh:
                 s = json.load(fh)
-            self.buckets = {int(k): set(v) for k, v in s.get("buckets", {}).items()}
-            self.last = s.get("last")
+            for nid, n in s.get("nodes", {}).items():
+                n["buckets"] = set(int(b) for b in n.get("buckets", []))
+                self.nodes[nid] = n
             self.messages = int(s.get("messages", 0))
             self.prune()
         except Exception:
@@ -91,50 +94,94 @@ class TelemetryStore:
     def save(self):
         try:
             with self.lock:
-                s = {"buckets": {str(k): sorted(v) for k, v in self.buckets.items()},
-                     "last": self.last, "messages": self.messages}
+                s = {"messages": self.messages, "nodes": {
+                    nid: dict(n, buckets=sorted(n["buckets"])) for nid, n in self.nodes.items()}}
             with open(STATE_PATH, "w") as fh:
                 json.dump(s, fh)
         except Exception:
             pass
 
     # -- ingest -----------------------------------------------------------
+    def _node(self, nid):
+        return self.nodes.setdefault(nid, {
+            "name": None, "short": None, "env": None, "env_ts": 0,
+            "pos": None, "last_seen": 0, "buckets": set()})
+
     def prune(self, now=None):
         cutoff = (now or time.time()) - WINDOW_S
-        self.buckets = {b: n for b, n in self.buckets.items() if b >= cutoff}
+        for n in self.nodes.values():
+            n["buckets"] = {b for b in n["buckets"] if b >= cutoff}
 
-    def record(self, node, env, now=None):
+    def record_telemetry(self, nid, env, now=None):
         now = now or time.time()
-        bucket = int(now // BUCKET_S) * BUCKET_S
         with self.lock:
-            self.buckets.setdefault(bucket, set()).add(node or "?")
+            n = self._node(nid)
+            n["buckets"].add(int(now // BUCKET_S) * BUCKET_S)
+            n["last_seen"] = max(n["last_seen"], now)
+            if env and now >= n["env_ts"]:      # out-of-order MQTT must not roll back the latest reading
+                n["env"], n["env_ts"] = env, now
             self.messages += 1
-            if env:
-                self.last = dict(env, node=node,
-                                 received_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)))
             self.prune(now)
+
+    def record_nodeinfo(self, nid, longname, shortname, now=None):
+        with self.lock:
+            n = self._node(nid)
+            if longname: n["name"] = longname
+            if shortname: n["short"] = shortname
+            n["last_seen"] = now or time.time()
+
+    def record_position(self, nid, lat, lng, now=None):
+        with self.lock:
+            n = self._node(nid)
+            n["pos"] = {"lat": round(lat, 5), "lng": round(lng, 5)}
+            n["last_seen"] = now or time.time()
 
     # -- read -------------------------------------------------------------
-    def snapshot(self, now=None):
+    def snapshot(self, now=None, active_s=3600):
         now = now or time.time()
         with self.lock:
             self.prune(now)
-            filled = len(self.buckets)
-            nodes = set()
-            for n in self.buckets.values():
-                nodes |= n
             total = WINDOW_S // BUCKET_S
+            mesh_buckets = set()
+            sensors, connected = [], []
+            for nid, n in sorted(self.nodes.items()):
+                if not n["buckets"] and not n["env"]:
+                    continue                      # never sent telemetry — a router, not a sensor
+                mesh_buckets |= n["buckets"]
+                is_conn = (now - n["env_ts"]) <= active_s if n["env_ts"] else False
+                s = {
+                    "node": nid,
+                    "name": n["name"] or nid,
+                    "short": n["short"],
+                    "connected": is_conn,
+                    "last": n["env"],
+                    "last_seen": iso(n["last_seen"]) if n["last_seen"] else None,
+                    "position": n["pos"],
+                    "uptime_24h_pct": round(100.0 * len(n["buckets"]) / total, 1),
+                }
+                sensors.append(s)
+                if is_conn and n["env"]:
+                    connected.append(n["env"])
+            averages = {}
+            if connected:
+                for k in set().union(*connected):
+                    vals = [e[k] for e in connected if isinstance(e.get(k), (int, float))]
+                    if vals:
+                        averages[k] = round(sum(vals) / len(vals), 2)
             return {
                 "source": "Meshtastic mesh via local bridge",
                 "binds_to": {"cell": "environmental:community",
                              "indicator": "Neighbourhood sensing uptime"},
-                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
-                "uptime_24h_pct": round(100.0 * filled / total, 1),
-                "buckets_filled": filled,
+                "updated_at": iso(now),
+                "uptime_24h_pct": round(100.0 * len(mesh_buckets) / total, 1),
+                "buckets_filled": len(mesh_buckets),
                 "buckets_total": total,
-                "nodes_seen_24h": sorted(nodes),
-                "messages_24h": self.messages if filled else 0,
-                "last": self.last,
+                "sensors_connected": len(connected),
+                "sensors_seen_24h": len(sensors),
+                "averages": averages,
+                "sensors": sensors,
+                "messages_24h": self.messages,
+                "active_window_s": active_s,
                 "normalisation": {"scale_min": 0, "scale_max": 100, "direction": "dido"},
             }
 
@@ -142,24 +189,43 @@ class TelemetryStore:
 STORE = TelemetryStore()
 
 
-def handle_mqtt_message(topic, payload_bytes):
-    """Parse a Meshtastic JSON MQTT message; record telemetry events."""
+def node_id_of(msg):
+    """Originating node: numeric `from` (formatted !hex) beats `sender`,
+    which is the gateway that uplinked the packet."""
+    f = msg.get("from")
+    if isinstance(f, int):
+        return "!%08x" % (f & 0xFFFFFFFF)
+    s = msg.get("sender")
+    return str(s) if s else "?"
+
+
+def handle_mqtt_message(topic, payload_bytes, node_filter=None):
     try:
         msg = json.loads(payload_bytes.decode("utf-8", "replace"))
     except Exception:
         return
-    if msg.get("type") != "telemetry":
+    nid = node_id_of(msg)
+    if node_filter and nid not in node_filter:
         return
-    p = msg.get("payload") or {}
-    env = {out: round(float(p[k]), 2) for k, out in ENV_KEYS.items() if isinstance(p.get(k), (int, float))}
-    node = msg.get("sender") or msg.get("from")
-    node = str(node) if node is not None else "?"
-    STORE.record(node, env or None)
+    t, p = msg.get("type"), msg.get("payload") or {}
+    if t == "telemetry":
+        env = {out: round(float(p[k]), 2) for k, out in ENV_KEYS.items()
+               if isinstance(p.get(k), (int, float))}
+        if env:                                   # ignore device-metrics-only telemetry
+            STORE.record_telemetry(nid, env)
+    elif t == "nodeinfo":
+        STORE.record_nodeinfo(p.get("id") or nid, p.get("longname"), p.get("shortname"))
+    elif t == "position":
+        lat, lng = p.get("latitude_i"), p.get("longitude_i")
+        if isinstance(lat, int) and isinstance(lng, int) and (lat or lng):
+            STORE.record_position(nid, lat / 1e7, lng / 1e7)
 
 
 class Handler(BaseHTTPRequestHandler):
+    active_s = 3600
+
     def do_GET(self):
-        body = json.dumps(STORE.snapshot(), indent=1).encode()
+        body = json.dumps(STORE.snapshot(active_s=self.active_s), indent=1).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -168,11 +234,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, *a):        # keep the terminal readable
+    def log_message(self, *a):
         pass
 
 
-def serve(port):
+def serve(port, active_s=3600):
+    Handler.active_s = active_s
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd
@@ -189,14 +256,7 @@ def run_mqtt(args, node_filter):
         client.subscribe(args.topic)
 
     def on_message(client, userdata, m):
-        if node_filter:
-            try:
-                sender = json.loads(m.payload).get("sender")
-            except Exception:
-                sender = None
-            if sender != node_filter:
-                return
-        handle_mqtt_message(m.topic, m.payload)
+        handle_mqtt_message(m.topic, m.payload, node_filter)
 
     try:
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -214,22 +274,54 @@ def run_mqtt(args, node_filter):
 
 
 def selftest():
-    """Feed fake telemetry, start the server, check the arithmetic."""
+    """Two fake sensors + a router node; checks counts, averages, list."""
+    global STORE
+    STORE = TelemetryStore.__new__(TelemetryStore)
+    STORE.lock, STORE.nodes, STORE.messages = threading.Lock(), {}, 0
     now = time.time()
-    for i in range(72):                       # 6 hours of 5-min readings
-        STORE.record("!selftest", {"temperature_c": 21.5, "relative_humidity_pct": 48.0},
-                     now=now - i * BUCKET_S)
-    snap = STORE.snapshot(now=now)
-    expected = round(100.0 * 72 / 288, 1)     # 25.0
-    ok = abs(snap["uptime_24h_pct"] - expected) < 0.2
-    print(("PASS" if ok else "FAIL") + f": uptime arithmetic — {snap['uptime_24h_pct']}% (expected ~{expected}%)")
-    print(("PASS" if snap["last"]["temperature_c"] == 21.5 else "FAIL") + ": last reading carried")
+    mk = lambda d: json.dumps(d).encode()
+
+    # sensor A: names itself, positions itself, 6 h of telemetry
+    handle_mqtt_message("t", mk({"from": 0x11223344, "type": "nodeinfo",
+        "payload": {"id": "!11223344", "longname": "Patio sensor", "shortname": "PAT"}}))
+    handle_mqtt_message("t", mk({"from": 0x11223344, "type": "position",
+        "payload": {"latitude_i": 413874000, "longitude_i": 21686000}}))
+    for i in range(72):
+        STORE.record_telemetry("!11223344", {"temperature_c": 21.0, "relative_humidity_pct": 50.0},
+                               now=now - i * BUCKET_S)
+    # deliberately out of order: the i-loop above fed newest first, so this
+    # also exercises the env_ts guard — the latest reading must win.
+    # sensor B: telemetry only, no name, currently connected
+    handle_mqtt_message("t", mk({"from": 0xdeadbeef, "type": "telemetry",
+        "payload": {"temperature_c_IGNORED": 1, "temperature": 23.0,
+                    "relative_humidity": 40.0, "barometric_pressure": 1012.0}}))
+    # a router that never sent telemetry must NOT count as a sensor
+    handle_mqtt_message("t", mk({"from": 0x0c0ffee0, "type": "nodeinfo",
+        "payload": {"id": "!0c0ffee0", "longname": "Rooftop router"}}))
+
+    s = STORE.snapshot(now=now)
+    checks = [
+        ("two sensors seen, router excluded", s["sensors_seen_24h"] == 2),
+        ("both connected inside active window", s["sensors_connected"] == 2),
+        ("averages across connected sensors", s["averages"].get("temperature_c") == 22.0
+                                             and s["averages"].get("relative_humidity_pct") == 45.0),
+        ("pressure averaged over the node that has it", s["averages"].get("barometric_pressure_hpa") == 1012.0),
+        ("nodeinfo name attached", any(x["name"] == "Patio sensor" for x in s["sensors"])),
+        ("position decoded", any(x["position"] == {"lat": 41.3874, "lng": 2.1686} for x in s["sensors"])),
+        ("mesh uptime ~25%", abs(s["uptime_24h_pct"] - 25.0) < 0.5),
+        ("per-node uptime present", all("uptime_24h_pct" in x for x in s["sensors"])),
+    ]
+    ok = True
+    for label, passed in checks:
+        print(("PASS" if passed else "FAIL") + ": " + label)
+        ok &= passed
     httpd = serve(8787)
     import urllib.request
     got = json.load(urllib.request.urlopen("http://127.0.0.1:8787/reading.json"))
-    print(("PASS" if got["uptime_24h_pct"] == snap["uptime_24h_pct"] else "FAIL") + ": HTTP endpoint serves the same number")
+    same = got["sensors_connected"] == s["sensors_connected"] and len(got["sensors"]) == 2
+    print(("PASS" if same else "FAIL") + ": HTTP endpoint serves the same picture")
     httpd.shutdown()
-    return 0 if ok else 1
+    return 0 if (ok and same) else 1
 
 
 def main():
@@ -239,8 +331,9 @@ def main():
     ap.add_argument("--user", default=None, help="e.g. meshdev on the public broker")
     ap.add_argument("--password", default=None)
     ap.add_argument("--tls", action="store_true")
-    ap.add_argument("--topic", default="msh/#", help="MQTT topic filter — narrow it to your region/channel")
-    ap.add_argument("--node", default=None, help="only count one node id, e.g. '!a1b2c3d4'")
+    ap.add_argument("--topic", default="msh/#", help="narrow to your region/channel, e.g. msh/EU_868/2/json/#")
+    ap.add_argument("--node", default=None, help="restrict to these node ids, comma-separated: '!a1b2c3d4,!deadbeef'")
+    ap.add_argument("--active-window", type=int, default=60, help="minutes without telemetry before a sensor stops counting as connected")
     ap.add_argument("--http-port", type=int, default=8787)
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
@@ -248,18 +341,20 @@ def main():
     if args.selftest:
         sys.exit(selftest())
 
-    serve(args.http_port)
-    run_mqtt(args, args.node)
+    node_filter = set(x.strip() for x in args.node.split(",")) if args.node else None
+    serve(args.http_port, active_s=args.active_window * 60)
+    run_mqtt(args, node_filter)
     print(f"""
 Bridge running.
-  MQTT     : {args.broker}:{args.port}  topic {args.topic}""" + (f"  node {args.node}" if args.node else "") + f"""
+  MQTT     : {args.broker}:{args.port}  topic {args.topic}""" + (f"  nodes {args.node}" if args.node else "  (all nodes on the mesh)") + f"""
   Endpoint : http://localhost:{args.http_port}/reading.json
 
-In the dashboard → Environmental × Community → Attach a reading → Live feed:
+Any new sensor that joins the same mesh appears automatically.
+Dashboard → Environmental × Community → Attach a reading → Live feed:
   API endpoint : http://localhost:{args.http_port}/reading.json
   JSON path    : uptime_24h_pct
   min 0 · max 100 · direction: higher = better
-Then 'Test & read now'. Ctrl-C to stop; state persists in {STATE_PATH}.""")
+Ctrl-C to stop; state persists in {STATE_PATH}.""")
     try:
         while True:
             time.sleep(60)

@@ -50,7 +50,7 @@ const confirmStub = () => false;
 const setTimeoutStub = (fn) => { try{ fn(); }catch(e){} return 0; };
 
 const src = dataJs + '\n' + m[1] + `
-;return { fitAxes, derivedFor, modelState, narrativeFor, tierStates, collectScores, MODE, SIMST, RHOEST, LS, normalise, SIM, CELLS, ingestCsv, SCHEMA_VERSION };`;
+;return { fitAxes, derivedFor, modelState, narrativeFor, tierStates, collectScores, MODE, SIMST, RHOEST, LS, normalise, SIM, CELLS, ingestCsv, SCHEMA_VERSION, meshFromJson, fmtMeshAvg, renderMeshPanel };`;
 
 let api;
 try {
@@ -118,5 +118,32 @@ const minor = api.ingestCsv(hdr+'\n'+row+'1.0', 'test');
 console.log((minor.applied===1 && minor.report.some(r=>r.status==='warning') ? 'PASS':'FAIL') + ': minor schema mismatch warns but loads');
 const same = api.ingestCsv(hdr+'\n'+row+api.SCHEMA_VERSION, 'test');
 console.log((same.applied===1 && !same.report.some(r=>r.status==='warning'&&r.label==='schema_version') ? 'PASS':'FAIL') + ': matching schema loads clean');
+
+/* mesh (Meshtastic bridge) plumbing */
+const bridgeJson = {
+  uptime_24h_pct: 87.5, sensors_connected: 2, sensors_seen_24h: 3,
+  averages: { temperature_c: 22.0, relative_humidity_pct: 45.0, barometric_pressure_hpa: 1012.0 },
+  updated_at: '2026-07-29T12:00:00Z',
+  sensors: [
+    { node:'!11223344', name:'Patio sensor', short:'PAT', connected:true,
+      last:{ temperature_c:21.0, relative_humidity_pct:50.0 },
+      position:{ lat:41.3874, lng:2.1686 }, last_seen:'2026-07-29T11:58:00Z', uptime_24h_pct:91.2 },
+    { node:'!deadbeef', name:'!deadbeef', connected:true,
+      last:{ temperature_c:23.0, relative_humidity_pct:40.0, barometric_pressure_hpa:1012.0 },
+      position:null, last_seen:'2026-07-29T11:59:00Z', uptime_24h_pct:83.8 }
+  ]
+};
+const mesh = api.meshFromJson(bridgeJson);
+console.log((mesh && mesh.connected===2 && mesh.sensors.length===2 ? 'PASS':'FAIL') + ': meshFromJson parses the bridge shape');
+console.log((api.meshFromJson({foo:1})===null ? 'PASS':'FAIL') + ': non-mesh JSON yields no mesh block');
+console.log((api.fmtMeshAvg(bridgeJson.averages,true)==='22.0 °C · 45 % RH · 1012 hPa' ? 'PASS':'FAIL') + ': averages format');
+api.MODE.set('evidence');
+api.LS.setRead('environmental:community', { kind:'live', score:0.875, url:'http://localhost:8787/reading.json',
+  path:'uptime_24h_pct', min:0, max:100, dir:'dido', value:87.5, mesh });
+const panel = api.renderMeshPanel('environmental:community');
+const okPanel = panel.includes('Patio sensor') && panel.includes('41.38740, 2.16860')
+  && panel.includes('2 connected now') && panel.includes('openstreetmap.org')
+  && panel.includes('no fix') && panel.includes('meshRefresh');
+console.log((okPanel ? 'PASS':'FAIL') + ': sensor list renders names, coordinates, count and refresh');
 
 console.log('DONE');
