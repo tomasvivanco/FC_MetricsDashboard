@@ -1,5 +1,5 @@
 cell,indicator,value,unit,observation_date,source,scale_min,scale_max,team,method,geography,confidence,notes,schema_version
-environmental:community,Products repaired,143,units / month,2026-06-30,"Repair cafe log, Sants",0,200,Table 4 — Boston,Manual count at close of each session,Sants-Montjuic,high,Two sessions cancelled in June; undercount likely,1.1
-social:community,Participation in making activities,312,unique people / month,2026-06-30,Workshop attendance sheets,0,400,Table 4 — Boston,"Sign-in sheet, deduplicated by email",Sants-Montjuic,high,,1.1
-governance:community,Council or assembly meetings held,3,meetings / quarter,2026-06-30,Meeting calendar,0,4,Table 4 — Boston,Counted from published minutes,Lab-wide,high,,1.1
-economic:community,Savings from repair and reuse,4820,currency / month avoided,2026-06-30,Repair log with replacement-cost lookup,0,8000,Table 4 — Boston,Replacement cost avoided per repaired item,Sants-Montjuic,medium,Replacement costs estimated from retail averages,1.1
+environmental:community,Products repaired,143,units / month,2026-06-30,"Repair cafe log, Sants",0,200,Table 4 — Boston,Manual count at close of each session,Sants-Montjuic,high,Two sessions cancelled in June; undercount likely,1.2
+social:community,Participation in making activities,312,unique people / month,2026-06-30,Workshop attendance sheets,0,400,Table 4 — Boston,"Sign-in sheet, deduplicated by email",Sants-Montjuic,high,,1.2
+governance:community,Council or assembly meetings held,3,meetings / quarter,2026-06-30,Meeting calendar,0,4,Table 4 — Boston,Counted from published minutes,Lab-wide,high,,1.2
+economic:community,Savings from repair and reuse,4820,currency / month avoided,2026-06-30,Repair log with replacement-cost lookup,0,8000,Table 4 — Boston,Replacement cost avoided per repaired item,Sants-Montjuic,medium,Replacement costs estimated from retail averages,1.2

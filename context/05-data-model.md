@@ -1,4 +1,4 @@
-written: 611 lines
+written: 613 lines
 reference
 
 > **Generated from `assets/data.js`.** Do not edit by hand — regenerate with
@@ -129,7 +129,7 @@ regenerative (green)** and 0 always extractive (red). A `pito`-direction indicat
 
 ## The twenty cells
 
-**20 cells · 53 indicators.** Feeder split: 4 lab, 7 mixed, 5 institutional, 4 fixed. Feasibility split: 18 high, 23 medium, 12 low.
+**20 cells · 54 indicators.** Feeder split: 4 lab, 7 mixed, 5 institutional, 4 fixed. Feasibility split: 19 high, 23 medium, 12 low.
 
 ### Environmental
 
@@ -155,11 +155,13 @@ One of three cells the FCI 3.0 methodology explicitly flags for sharpened argume
 | Products repaired | `units / month` | higher = better | High | Repair-café and workshop records |
 | Waste diverted from landfill | `% of stream` | higher = better | Medium | Municipal collection data cross-checked with lab records |
 | Renewable energy consumed | `% of lab load` | higher = better | Medium | Utility bills / submetering |
+| Neighbourhood sensing uptime | `% of last 24 h` | higher = better | High | Meshtastic mesh via local bridge (scripts/meshtastic_bridge.py) — hub-own instrument |
 
 - **Material reused or recycled locally** → Share of total material throughput diverted locally; 0 = none diverted, 1 = diversion at the practical ceiling agreed for the lab's catchment.
 - **Products repaired** → Repairs per 1,000 catchment residents, min-max scaled against network peer labs.
 - **Waste diverted from landfill** → Direct percentage, used as-is (already 0–1).
 - **Renewable energy consumed** → Direct percentage of the facility's own consumption.
+- **Neighbourhood sensing uptime** → Share of the last 24 hours in which the community's own sensor mesh delivered environment telemetry (5-minute buckets with at least one reading). Direct percentage. Measures the capacity to know your own air — the raw temperature/humidity/pressure values travel alongside but are not the indicator.
 
 #### `environmental:city` — Environmental × City
 

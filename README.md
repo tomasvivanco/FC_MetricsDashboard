@@ -86,9 +86,15 @@ produce this number?*
 Only ~17% of indicators are measurable by a fab lab with no external input, and they sit almost entirely
 in the Community row. **The network owns the bottom row and almost nothing above it.** That is not a flaw
 in the framework — it is the map of where the network is strong and where it has to go and ask. It is
-also why the workshop exercise happens on the Community row, and why the dashboard surfaces nine
+also why the workshop exercise happens on the Community row, and why the dashboard surfaces ten
 *network-own* data sources (fablabs.io, Fab Academy, Precious Plastic, Smart Citizen, OpenStreetMap,
-Decidim and others) as the honest route upward.
+Decidim, your own Meshtastic sensor mesh, and others) as the honest route upward.
+
+**Live from your own hardware:** `scripts/meshtastic_bridge.py` subscribes to your Meshtastic
+gateway's MQTT JSON feed and serves `http://localhost:8787/reading.json`; point the
+Environmental × Community cell's Live-feed panel at it (path `uptime_24h_pct`, min 0, max 100,
+higher = better) and the cell updates from your own mesh. `pip install paho-mqtt` is the only
+dependency; `--selftest` verifies the arithmetic offline.
 
 ---
 

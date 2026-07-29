@@ -109,6 +109,24 @@ connectors:
     effort_days: 3
     notes: IAAC pattern — lab flies it, lab owns the imagery.
 
+  # ── hub-own hardware ─────────────────────────────────────────────────
+
+  - slug: meshtastic-mesh
+    upstream: data/environmental/community/meshtastic.yaml   # not yet authored upstream — contribute first
+    status: live
+    feeds: [environmental:community]
+    endpoint: MQTT (own broker or mqtt.meshtastic.org) → scripts/meshtastic_bridge.py → http://localhost:8787/reading.json
+    auth: broker credentials, held locally by the bridge
+    effort_days: 0
+    notes: |
+      The first genuinely live connector on this surface, and the first
+      cell a hub can light with hardware it fully owns. The indicator is
+      'Neighbourhood sensing uptime' (% of 5-min buckets in 24 h with
+      telemetry) — capacity to know your own air, direction dido. Raw
+      temperature/humidity/pressure travel alongside in the same JSON but
+      are not the indicator. The bridge runs on the operator's machine;
+      nothing leaves it.
+
   # ── manual routes actually in use today ──────────────────────────────
 
   - slug: team-csv-submissions

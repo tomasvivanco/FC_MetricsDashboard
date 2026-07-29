@@ -23,8 +23,9 @@
    an existing indicator's name, unit or direction changes (old files break —
    write a migration note in data/README.md).
    1.0 — FAB26 build · 1.1 — adds the two network-registry indicators
-   (fab lab density, community sensors reporting). */
-const SCHEMA_VERSION = "1.1";
+   (fab lab density, community sensors reporting) · 1.2 — adds
+   neighbourhood sensing uptime (Meshtastic bridge). */
+const SCHEMA_VERSION = "1.2";
 
 const META = {
   version: "v0.5 — model completion build",
@@ -187,7 +188,9 @@ const NETWORK_SOURCES = [
   { name:"Decidim platform health", feeds:"Governance × City", api:"Decidim API",
     plain:"Actual civic participation on the city's own deliberation platform — not electoral turnout as a stand-in.", effort:"low" },
   { name:"FAB / GOSH conference attendance", feeds:"Social × Bioregion", api:"Event attendance records",
-    plain:"Who from this bioregion shows up to the network's knowledge events. A crude but real measure of connection.", effort:"low" }
+    plain:"Who from this bioregion shows up to the network's knowledge events. A crude but real measure of connection.", effort:"low" },
+  { name:"Meshtastic sensor mesh", feeds:"Environmental × Community", api:"MQTT → scripts/meshtastic_bridge.py",
+    plain:"Your own LoRa mesh, sensing your own air. The bridge turns its telemetry into a live uptime reading — the first cell the hub can light up with hardware it fully owns.", effort:"low" }
 ];
 
 const FEASIBILITY = {
@@ -227,7 +230,10 @@ const CELLS = {
         source:"Municipal collection data cross-checked with lab records" },
       { name:"Renewable energy consumed", unit:"% of lab load", direction:"dido", feasibility:"medium",
         norm:"Direct percentage of the facility's own consumption.",
-        source:"Utility bills / submetering" }
+        source:"Utility bills / submetering" },
+      { name:"Neighbourhood sensing uptime", unit:"% of last 24 h", direction:"dido", feasibility:"high",
+        norm:"Share of the last 24 hours in which the community's own sensor mesh delivered environment telemetry (5-minute buckets with at least one reading). Direct percentage. Measures the capacity to know your own air — the raw temperature/humidity/pressure values travel alongside but are not the indicator.",
+        source:"Meshtastic mesh via local bridge (scripts/meshtastic_bridge.py) — hub-own instrument" }
     ]
   },
   "environmental:city": {

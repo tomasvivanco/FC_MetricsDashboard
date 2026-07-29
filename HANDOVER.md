@@ -131,7 +131,7 @@ from their own repair log this month produces a commitment.
 **For ingestion strategy.** At City and Region scale the job is not *measurement*, it is *relationship*.
 The deliverable is not a sensor — it is knowing who owns the export and having their email.
 
-### The way out: nine sources the network already owns
+### The way out: ten sources the network already owns
 
 Not in the original theoretical sheet. Added afterwards precisely to close this gap — real, already
 queryable sources the network itself controls, which feed City/Region/Bioregion cells without depending
@@ -148,6 +148,7 @@ wholly on official statistics:
 | Lab-operated drone mapping | Environmental × Community | medium |
 | Decidim platform health | Governance × City | low |
 | FAB/GOSH attendance from the bioregion | Social × Bioregion | low |
+| Meshtastic sensor mesh (via `scripts/meshtastic_bridge.py`) | Environmental × Community | low — **wired, live** |
 
 **Wiring two or three of these as live connectors is the highest-leverage engineering task on this
 project.** Six are low-effort API calls against registries the network already runs.
