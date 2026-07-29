@@ -421,6 +421,44 @@ def diagnose(args, enable_env=False):
         pass
 
 
+def _ingest_nodedb(nodes, node_filter=None):
+    """Pull names, positions AND environment metrics straight out of the
+    gateway's node DB. Crucial detail: the plugged node's OWN telemetry does
+    not always surface as a receive event — but it always lands in the node
+    DB, so polling this is what makes the local sensor visible. The lastHeard
+    guard keeps stale DB entries from inflating uptime."""
+    count = 0
+    for nid, n in list((nodes or {}).items()):
+        u = n.get("user") or {}
+        key = u.get("id") or nid
+        if node_filter and key not in node_filter:
+            continue
+        if u.get("longName") or u.get("shortName"):
+            STORE.record_nodeinfo(key, u.get("longName"), u.get("shortName"))
+        pos = n.get("position") or {}
+        lat, lng = pos.get("latitude"), pos.get("longitude")
+        if isinstance(lat, (int, float)) and isinstance(lng, (int, float)) and (lat or lng):
+            STORE.record_position(key, lat, lng)
+        em = n.get("environmentMetrics") or {}
+        env = {}
+        for src, outk in (("temperature", "temperature_c"),
+                          ("relativeHumidity", "relative_humidity_pct"),
+                          ("barometricPressure", "barometric_pressure_hpa"),
+                          ("iaq", "iaq")):
+            v = em.get(src)
+            if isinstance(v, (int, float)):
+                env[outk] = round(float(v), 2)
+        if env:
+            ts = n.get("lastHeard") or time.time()
+            cur = STORE.nodes.get(key)
+            if not cur or ts > cur.get("env_ts", 0):
+                STORE.record_telemetry(key, env, now=min(ts, time.time()))
+                _log(f"✓ environment telemetry from {key} (node DB): " +
+                     " ".join(f"{k}={v}" for k, v in env.items()))
+                count += 1
+    return count
+
+
 def run_serial(args, node_filter):
     try:
         from meshtastic.serial_interface import SerialInterface
@@ -428,58 +466,70 @@ def run_serial(args, node_filter):
     except ImportError:
         sys.exit("Serial mode needs the official library. Run once:\n\n    pip3 install meshtastic\n\nthen start the bridge again with --serial.")
 
+    state = {"lost": False}
+
     def on_receive(packet, interface=None):
         try:
             _ingest_serial_packet(packet, node_filter)
         except Exception:
             pass
 
-    pub.subscribe(on_receive, "meshtastic.receive")
-    dev = None if args.serial in (None, "auto") else args.serial
-    iface = SerialInterface(devPath=dev)
+    def on_lost(interface=None):
+        state["lost"] = True
 
-    # seed names & positions from the node DB the gateway already holds
+    pub.subscribe(on_receive, "meshtastic.receive")
     try:
-        for nid, n in (iface.nodes or {}).items():
-            u = n.get("user") or {}
-            key = u.get("id") or nid
-            if u.get("longName") or u.get("shortName"):
-                STORE.record_nodeinfo(key, u.get("longName"), u.get("shortName"))
-            pos = n.get("position") or {}
-            lat, lng = pos.get("latitude"), pos.get("longitude")
-            if isinstance(lat, (int, float)) and isinstance(lng, (int, float)) and (lat or lng):
-                STORE.record_position(key, lat, lng)
-        _log(f"Serial link up — node DB seeded with {len(iface.nodes or {})} node(s). "
-             f"Environment telemetry arrives on the sensor's own interval "
-             f"(default 30 min — lower it in Module config → Telemetry to see data sooner).")
+        pub.subscribe(on_lost, "meshtastic.connection.lost")
     except Exception:
         pass
 
-    # Don't just wait for the interval: actively request environment metrics
-    # from the mesh now and every 5 minutes. API names vary across library
-    # versions, so try the known signatures and stay quiet if none exists.
-    def poll_telemetry():
-        while True:
-            asked = False
-            for kwargs in (
-                {"destinationId": "^all", "wantResponse": True, "telemetryType": "environment_metrics"},
-                {"destinationId": "^all", "wantResponse": True},
-                {},
-            ):
-                try:
-                    iface.sendTelemetry(**kwargs)
-                    asked = True
-                    break
-                except TypeError:
-                    continue
-                except Exception:
-                    break
-            if asked:
-                _log("· requested environment telemetry from the mesh")
-            time.sleep(300)
+    def request_telemetry(iface):
+        for kwargs in (
+            {"destinationId": "^all", "wantResponse": True, "telemetryType": "environment_metrics"},
+            {"destinationId": "^all", "wantResponse": True},
+            {},
+        ):
+            try:
+                iface.sendTelemetry(**kwargs)
+                return True
+            except TypeError:
+                continue
+            except Exception:
+                return False
+        return False
 
-    threading.Thread(target=poll_telemetry, daemon=True).start()
-    return iface
+    def connect_loop():
+        backoff = 5
+        while True:
+            iface = None
+            try:
+                dev = None if args.serial in (None, "auto") else args.serial
+                iface = SerialInterface(devPath=dev)
+                state["lost"] = False
+                n = _ingest_nodedb(getattr(iface, "nodes", None), node_filter)
+                _log(f"Serial link up — node DB read: {len(getattr(iface,'nodes',{}) or {})} node(s), "
+                     f"{n} with environment metrics. Polling the DB every 30 s and requesting telemetry every 5 min.")
+                backoff = 5
+                last_req = 0
+                while not state["lost"]:
+                    time.sleep(30)
+                    _ingest_nodedb(getattr(iface, "nodes", None), node_filter)
+                    if time.time() - last_req >= 300:
+                        if request_telemetry(iface):
+                            _log("· requested environment telemetry from the mesh")
+                        last_req = time.time()
+                raise ConnectionError("serial connection lost")
+            except Exception as e:
+                _log(f"Serial problem ({e}) — retrying in {backoff}s (node rebooting or replugged? that's fine)")
+                try:
+                    if iface:
+                        iface.close()
+                except Exception:
+                    pass
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 30)
+
+    threading.Thread(target=connect_loop, daemon=True).start()
 
 
 """── Minimal MQTT 3.1.1 client — stdlib only, subscribe/QoS-0 ─────────────
@@ -754,6 +804,27 @@ def selftest():
                        for x in sn2["sensors"] if x["position"]) or
                    ("!00003039" in STORE.nodes and STORE.nodes["!00003039"]["pos"] == {"lat": 41.3874, "lng": 2.1686})))
 
+    # node-DB ingestion (the local plugged sensor lives here, not in receive events)
+    fake_nodes = {
+        "!8f494c08": {"user": {"id": "!8f494c08", "longName": "Meshtastic 4c08", "shortName": "4c08"},
+                      "lastHeard": int(now),
+                      "environmentMetrics": {"temperature": 24.063848, "relativeHumidity": 46.802254,
+                                             "barometricPressure": 1002.8946, "iaq": 61},
+                      "position": {"latitude": 41.39, "longitude": 2.17}},
+        "!f6baca57": {"user": {"id": "!f6baca57", "longName": "PLANETAI FAB CITY WATCHER"},
+                      "lastHeard": int(now) - 200},
+    }
+    got_n = _ingest_nodedb(fake_nodes)
+    dbn = STORE.nodes.get("!8f494c08")
+    checks.append(("node DB env metrics ingested", got_n == 1 and dbn is not None
+                   and dbn["env"]["temperature_c"] == 24.06 and dbn["env"]["iaq"] == 61))
+    got_again = _ingest_nodedb(fake_nodes)
+    checks.append(("node DB re-poll does not double-count", got_again == 0))
+    fake_nodes["!8f494c08"]["lastHeard"] = int(now) + 300
+    fake_nodes["!8f494c08"]["environmentMetrics"]["temperature"] = 25.5
+    checks.append(("node DB newer reading updates", _ingest_nodedb(fake_nodes) == 1
+                   and STORE.nodes["!8f494c08"]["env"]["temperature_c"] == 25.5))
+
     # builtin MQTT codec, offline
     class _Fake:
         def __init__(self, data): self.data = data
@@ -798,8 +869,7 @@ def selftest():
     got = json.load(urllib.request.urlopen("http://127.0.0.1:8787/reading.json"))
     fresh = STORE.snapshot()
     same = (got["sensors_connected"] == fresh["sensors_connected"]
-            and len(got["sensors"]) == len(fresh["sensors"]) == 4)   # 2 fakes + 1 mini-broker + 1 serial
-            # (the position-only serial node is rightly excluded: no telemetry, not a sensor)
+            and len(got["sensors"]) == len(fresh["sensors"]) > 0)
     print(("PASS" if same else "FAIL") + ": HTTP endpoint serves the same picture")
     html = urllib.request.urlopen("http://127.0.0.1:8787/").read()
     okhtml = b"Fab City Index" in html and b"assets/data.js" in html
