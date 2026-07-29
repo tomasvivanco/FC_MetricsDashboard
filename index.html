@@ -231,6 +231,48 @@ ul.plainlist li{margin-bottom:5px; font-size:13.5px; color:var(--text-secondary)
 .ws-light.on-dark{background:var(--surface-0); border-color:var(--border-stronger); color:var(--text-secondary);}
 .chip-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle;}
 .footer{margin-top:2.5rem; padding-top:1.15rem; border-top:0.5px solid var(--border); font-size:12px; color:var(--text-muted);}
+
+/* ---------- ACCESSIBILITY ---------- */
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible{
+  outline:2px solid var(--border-accent); outline-offset:2px;
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important; animation:none !important;}
+  html{scroll-behavior:auto !important;}
+}
+
+/* ---------- MOBILE ---------- */
+@media (max-width:640px){
+  .wrap{padding:1rem 0.8rem 3rem;}
+  h1{font-size:24px;}
+  .fci-big{font-size:32px;}
+  .axis-row .axis-name{width:110px; font-size:11px;}
+  nav.tabs button{padding:8px 10px; font-size:12.5px;}
+  .fci-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+
+/* ---------- EMBED MODE (?embed=matrix | cities | formula …) ---------- */
+body.is-embed header.top, body.is-embed nav.tabs, body.is-embed .footer,
+body.is-embed .ws-toggle-row, body.is-embed .ws-setup{display:none !important;}
+body.is-embed .wrap{padding:0.8rem; max-width:none;}
+
+/* ---------- PRINT ---------- */
+@media print{
+  body{background:#fff; font-size:11.5px; color:#000;}
+  nav.tabs, .mode-row, .ws-toggle-row, .ws-setup, .ws-counter, #storageWarn,
+  .btn, button.detail-close, .preset-row, .read-tabs, .read-pane, .axis-row input,
+  input, select, textarea, .status-line, .legend-block .tiny{display:none !important;}
+  section.view{display:none !important;}
+  section.view.active{display:block !important;}
+  .card{border:0.5px solid #999; box-shadow:none; break-inside:avoid; page-break-inside:avoid; margin-bottom:0.6rem;}
+  .cell-btn{height:auto; min-height:88px; border-color:#999;}
+  table.matrix{min-width:0;}
+  .matrix-scroll{overflow:visible;}
+  a{color:#000; text-decoration:none;}
+  a[href^="http"]::after{content:" (" attr(href) ")"; font-size:9px; color:#555;}
+  #cellDetail.show{display:block !important;}
+  .fci-banner .narrative-line{color:#000;}
+}
 </style>
 </head>
 <body>
@@ -762,9 +804,9 @@ function renderBanner(){
   const modeBtns = `
     <div class="mode-row">
       <span class="tiny" style="font-weight:500; color:var(--text-primary);">View:</span>
-      <button class="mode-btn ${mode==='evidence'?'active':''}" data-mode="evidence" title="Only attached readings. Grey means no data — and grey is fine.">Evidence</button>
-      <button class="mode-btn ${mode==='model'?'active':''}" data-mode="model" title="Measured cells stay fixed and fit the city's axes; dark cells are filled with cross-hatched model projections.">Evidence + model</button>
-      <button class="mode-btn ${mode==='sim'?'active':''}" data-mode="sim" title="The exhibition console: three sliders, twenty cells, all mock.">Simulation</button>
+      <button class="mode-btn ${mode==='evidence'?'active':''}" aria-pressed="${mode==='evidence'}" data-mode="evidence" title="Only attached readings. Grey means no data — and grey is fine.">Evidence</button>
+      <button class="mode-btn ${mode==='model'?'active':''}" aria-pressed="${mode==='model'}" data-mode="model" title="Measured cells stay fixed and fit the city's axes; dark cells are filled with cross-hatched model projections.">Evidence + model</button>
+      <button class="mode-btn ${mode==='sim'?'active':''}" aria-pressed="${mode==='sim'}" data-mode="sim" title="The exhibition console: three sliders, twenty cells, all mock.">Simulation</button>
       ${mode==='sim' ? `<span class="sim-badge">○ ${esc(SIM.badge)}</span>` : ''}
       ${mode==='model' ? `<span class="model-badge">derived values are projections, not evidence</span>` : ''}
     </div>`;
@@ -1042,6 +1084,7 @@ function buildMatrix(){
     h += '</tr>';
   });
   t.innerHTML = h;
+  t.setAttribute('aria-label', 'The matrix: four pillars by five scales, twenty cells. Each cell is a button — activate it for indicators and readings.');
   $$('.cell-btn', t).forEach(b => b.addEventListener('click', ()=>showCell(b.dataset.key)));
 
   $('#kindLegend').innerHTML = '<span style="font-weight:500; color:var(--text-primary);">Reading type:</span>' +
@@ -1360,6 +1403,7 @@ function wireWsCard(key){
 function renderWsUI(){
   const on = LS.wsOn(), setup = LS.setup();
   $('#wsToggle').classList.toggle('active', on);
+  $('#wsToggle').setAttribute('aria-pressed', String(on));
   $('#wsSetup').classList.toggle('show', on);
   if(setup.table) $('#wsTableName').value = setup.table;
   const sel = $('#wsCity');
@@ -1976,6 +2020,19 @@ $('#submitSteps') && ($('#submitSteps').innerHTML = [
 ].map(s=>`<div class="step-row"><div class="step-n">${s.n}</div><div><h4 style="margin-bottom:0.15rem; color:var(--text-primary);">${s.h}</h4><p class="tiny" style="margin:0;">${s.p}</p></div></div>`).join(''));
 
 /* ============================ boot ============================ */
+/* Embed mode: ?embed=<view> strips the chrome and opens one view — so the
+   FCI site or the observatory can iframe this instrument instead of
+   re-implementing it. e.g. index.html?embed=matrix · ?embed=cities */
+(()=>{
+  let view = null;
+  try{ view = new URLSearchParams(window.location.search).get('embed'); }catch(e){}
+  if(!view) return;
+  document.body.classList.add('is-embed');
+  const target = $('#view-'+view) ? view : 'matrix';
+  $$('#tabs button').forEach(b=>b.classList.toggle('active', b.dataset.view===target));
+  $$('section.view').forEach(v=>v.classList.remove('active'));
+  $('#view-'+target).classList.add('active');
+})();
 renderBanner();
 buildMatrix();
 buildCityChips();

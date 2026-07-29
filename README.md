@@ -61,6 +61,11 @@ against the model. In **Simulation** view the console itself runs here: three sl
 0–100 scale with the 37 ceiling, the five-FCIs-per-scale matryoshka strip, and a one-sentence plain
 reading of the state, always in sight.
 
+**Embedding:** any view can be iframed without chrome — `index.html?embed=matrix`,
+`?embed=cities`, `?embed=formula` — so the FCI site or the PLANETAI observatory can embed this
+instrument instead of re-implementing it. There is also a print stylesheet: ⌘P on the matrix or an
+open cell panel produces a clean one-pager.
+
 **6. Runs the WS3 workshop.** A dedicated mode where tables dot the matrix green / yellow / dark, fill one
 card per cell (one cell, one source, one name, one date, one first step), and the facilitator collects
 every card from a single sheet.
