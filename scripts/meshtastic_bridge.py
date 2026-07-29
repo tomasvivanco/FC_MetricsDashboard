@@ -363,6 +363,62 @@ def run_mqtt_builtin(args, node_filter):
     threading.Thread(target=worker, daemon=True).start()
 
 
+"""── Mini-broker mode (--listen) ──────────────────────────────────────────
+No broker on your network? The bridge can BE the broker: it listens on
+port 1883, the Meshtastic gateway connects straight to this machine, and
+every JSON publish lands in the store. Uplink-capture only — it does not
+forward anything back to the mesh, which is all this instrument needs."""
+
+
+def _broker_client_thread(conn, addr, node_filter):
+    conn.settimeout(180)
+    rd = _SockReader(conn)
+    try:
+        while True:
+            h, body = mqtt_read_packet(rd)
+            t = h >> 4
+            if t == 1:                                   # CONNECT → accept anyone
+                conn.sendall(b"\x20\x02\x00\x00")
+                print(f"Gateway connected from {addr[0]}")
+            elif t == 3:                                 # PUBLISH
+                if (h >> 1) & 0x03 == 1:                 # QoS 1 → PUBACK
+                    tlen = struct.unpack(">H", body[:2])[0]
+                    conn.sendall(b"\x40\x02" + body[2 + tlen:4 + tlen])
+                topic, payload = mqtt_parse_publish(h, body)
+                handle_mqtt_message(topic, payload, node_filter)
+            elif t == 8:                                 # SUBSCRIBE → grant QoS 0
+                conn.sendall(b"\x90\x03" + body[:2] + b"\x00")
+            elif t == 12:                                # PINGREQ
+                conn.sendall(b"\xd0\x00")
+            elif t == 14:                                # DISCONNECT
+                return
+    except Exception:
+        pass
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def run_mini_broker(args, node_filter):
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("0.0.0.0", args.listen_port))
+    srv.listen(8)
+
+    def accept_loop():
+        while True:
+            try:
+                conn, addr = srv.accept()
+                threading.Thread(target=_broker_client_thread, args=(conn, addr, node_filter), daemon=True).start()
+            except Exception:
+                time.sleep(1)
+
+    threading.Thread(target=accept_loop, daemon=True).start()
+    return srv
+
+
 def run_mqtt(args, node_filter):
     try:
         import paho.mqtt.client as mqtt
@@ -370,7 +426,7 @@ def run_mqtt(args, node_filter):
         return run_mqtt_builtin(args, node_filter)
 
     def on_connect(client, userdata, flags, rc, properties=None):
-        print(f"MQTT connected (rc={rc}) — subscribing to {args.topic}")
+        print(f"MQTT connected (paho, rc={rc}) — subscribing to {args.topic}")
         client.subscribe(args.topic)
 
     def on_message(client, userdata, m):
@@ -386,8 +442,22 @@ def run_mqtt(args, node_filter):
         client.tls_set()
     client.on_connect = on_connect
     client.on_message = on_message
-    client.connect(args.broker, args.port, keepalive=60)
-    client.loop_start()
+    client.reconnect_delay_set(min_delay=3, max_delay=60)
+
+    def connect_with_retry():
+        backoff = 3
+        while True:
+            try:
+                client.connect(args.broker, args.port, keepalive=60)
+                client.loop_start()               # paho auto-reconnects from here on
+                return
+            except Exception as e:
+                print(f"Cannot reach {args.broker}:{args.port} ({e}) — retrying in {backoff}s. "
+                      f"No broker on your network? Run with --listen and point the gateway at this machine.")
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+
+    threading.Thread(target=connect_with_retry, daemon=True).start()
     return client
 
 
@@ -448,6 +518,22 @@ def selftest():
     h1, body1 = mqtt_read_packet(_SockReader(_Fake(pub1)))
     checks.append(("QoS-1 PUBLISH skips the packet id", mqtt_parse_publish(h1, body1)[1] == payload))
 
+    # mini-broker (--listen) over a socketpair, offline
+    a, b = socket.socketpair()
+    threading.Thread(target=_broker_client_thread, args=(b, ("selftest", 0), None), daemon=True).start()
+    conn_pkt = mqtt_connect_packet("gateway")
+    pub_payload = json.dumps({"from": 0x77777777, "type": "telemetry",
+                              "payload": {"temperature": 19.5, "relative_humidity": 60.0}}).encode()
+    pub_pkt = bytes([0x30]) + _enc_len(2 + 5 + len(pub_payload)) + _enc_str("msh/t") + pub_payload
+    a.sendall(conn_pkt + pub_pkt + b"\xc0\x00")            # CONNECT + PUBLISH + PINGREQ
+    time.sleep(0.3)
+    a.settimeout(2)
+    resp = a.recv(64)
+    checks.append(("mini-broker answers CONNACK + PINGRESP", resp.startswith(b"\x20\x02\x00\x00") and b"\xd0\x00" in resp))
+    checks.append(("mini-broker ingests gateway publishes", "!77777777" in STORE.nodes
+                   and STORE.nodes["!77777777"]["env"]["temperature_c"] == 19.5))
+    a.close()
+
     ok = True
     for label, passed in checks:
         print(("PASS" if passed else "FAIL") + ": " + label)
@@ -455,7 +541,9 @@ def selftest():
     httpd = serve(8787)
     import urllib.request
     got = json.load(urllib.request.urlopen("http://127.0.0.1:8787/reading.json"))
-    same = got["sensors_connected"] == s["sensors_connected"] and len(got["sensors"]) == 2
+    fresh = STORE.snapshot()
+    same = (got["sensors_connected"] == fresh["sensors_connected"]
+            and len(got["sensors"]) == len(fresh["sensors"]) == 3)   # 2 fakes + 1 via mini-broker
     print(("PASS" if same else "FAIL") + ": HTTP endpoint serves the same picture")
     httpd.shutdown()
     return 0 if (ok and same) else 1
@@ -472,6 +560,8 @@ def main():
     ap.add_argument("--node", default=None, help="restrict to these node ids, comma-separated: '!a1b2c3d4,!deadbeef'")
     ap.add_argument("--active-window", type=int, default=60, help="minutes without telemetry before a sensor stops counting as connected")
     ap.add_argument("--http-port", type=int, default=8787)
+    ap.add_argument("--listen", action="store_true", help="no broker needed: BE the broker — the gateway connects straight to this machine")
+    ap.add_argument("--listen-port", type=int, default=1883)
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
 
@@ -480,10 +570,19 @@ def main():
 
     node_filter = set(x.strip() for x in args.node.split(",")) if args.node else None
     serve(args.http_port, active_s=args.active_window * 60)
-    run_mqtt(args, node_filter)
+    if args.listen:
+        run_mini_broker(args, node_filter)
+        try:
+            my_ip = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            my_ip = "<this machine's IP>"
+        mqtt_line = f"mini-broker on 0.0.0.0:{args.listen_port} — set the gateway's MQTT server address to {my_ip} (JSON output enabled)"
+    else:
+        run_mqtt(args, node_filter)
+        mqtt_line = f"{args.broker}:{args.port}  topic {args.topic}"
     print(f"""
 Bridge running.
-  MQTT     : {args.broker}:{args.port}  topic {args.topic}""" + (f"  nodes {args.node}" if args.node else "  (all nodes on the mesh)") + f"""
+  MQTT     : {mqtt_line}""" + (f"  nodes {args.node}" if args.node else "  (all nodes on the mesh)") + f"""
   Endpoint : http://localhost:{args.http_port}/reading.json
 
 Any new sensor that joins the same mesh appears automatically.
