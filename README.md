@@ -213,3 +213,9 @@ The dashboard is deliberately dependency-free. If you extend it:
 ---
 
 *Fab City Foundation research and operations. Working build — comments to `index@fab.city`.*
+
+---
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE). Aligned with the PLANETAI stack (Apache 2.0 across code surfaces). Weights, methodology text and cell notes carry their provenance flags regardless of licence: *documented* vs *reconstructed* is an epistemic distinction, not a legal one.
