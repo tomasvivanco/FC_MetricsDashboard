@@ -1165,34 +1165,43 @@ function renderMeshPanel(key){
   if(!r || !r.mesh || LS.wsOn()) return '';
   const m = r.mesh;
   const num = (x,d,u) => typeof x==='number' ? x.toFixed(d)+u : '—';
-  const rows = (m.sensors||[]).map(s=>{
-    const e = s.last || {};
-    const pos = s.position
-      ? `<a href="https://www.openstreetmap.org/?mlat=${s.position.lat}&mlon=${s.position.lng}#map=17/${s.position.lat}/${s.position.lng}" target="_blank" rel="noopener">${s.position.lat.toFixed(5)}, ${s.position.lng.toFixed(5)}</a>`
-      : '<span class="tiny">no fix</span>';
-    return `<tr>
-      <td><span class="mesh-dot ${s.connected?'':'off'}" title="${s.connected?'reporting now':'quiet — outside the active window'}"></span>
-          <strong style="font-weight:500;">${esc(s.name||s.node)}</strong>${s.short?` <span class="tiny">(${esc(s.short)})</span>`:''}
-          <div class="tiny"><code>${esc(s.node)}</code></div></td>
-      <td>${num(e.temperature_c,1,' °C')}</td>
-      <td>${num(e.relative_humidity_pct,0,' %')}</td>
-      <td>${num(e.barometric_pressure_hpa,0,' hPa')}</td>
-      <td class="tiny">${pos}</td>
-      <td class="tiny">${esc(s.last_seen||'—')}</td>
-      <td>${num(s.uptime_24h_pct,1,' %')}</td>
-    </tr>`;
-  }).join('');
+  const list = (m.nodes && m.nodes.length ? m.nodes : m.sensors) || [];
+  /* sensors first (connected on top), then plain nodes by recency */
+  const rows = list.slice().sort((a,b)=>
+      ((b.is_sensor!==false)-(a.is_sensor!==false)) || ((b.connected?1:0)-(a.connected?1:0))
+      || String(b.last_seen||'').localeCompare(String(a.last_seen||'')))
+    .map(s=>{
+      const e = s.last || {}, d = s.dev || {};
+      const isSensor = s.is_sensor !== false && (s.last || s.uptime_24h_pct != null);
+      const pos = s.position
+        ? `<a href="https://www.openstreetmap.org/?mlat=${s.position.lat}&mlon=${s.position.lng}#map=17/${s.position.lat}/${s.position.lng}" target="_blank" rel="noopener">${s.position.lat.toFixed(5)}, ${s.position.lng.toFixed(5)}</a>`
+        : '<span class="tiny">no fix</span>';
+      return `<tr>
+        <td><span class="mesh-dot ${s.connected?'':'off'}" title="${s.connected?'reporting now':'quiet — outside the active window'}"></span>
+            <strong style="font-weight:500;">${esc(s.name||s.node)}</strong>${s.short?` <span class="tiny">(${esc(s.short)})</span>`:''}
+            <div class="tiny"><code>${esc(s.node)}</code>${isSensor?'':' · <em>node — no environmental sensor reporting</em>'}</div></td>
+        <td>${num(e.temperature_c,1,' °C')}</td>
+        <td>${num(e.relative_humidity_pct,0,' %')}</td>
+        <td>${num(e.barometric_pressure_hpa,0,' hPa')}</td>
+        <td>${num(e.iaq,0,'')}</td>
+        <td>${num(d.battery_pct,0,' %')}</td>
+        <td class="tiny">${pos}</td>
+        <td class="tiny">${esc(s.last_seen||'—')}</td>
+        <td>${num(s.uptime_24h_pct,1,' %')}</td>
+      </tr>`;
+    }).join('');
+  const nodesTotal = m.nodes ? m.nodes.length : m.seen;
   return `
   <div class="read-box" id="meshPanel">
-    <h3>📡 Mesh sensors — ${m.connected} connected now · ${m.seen} seen in 24 h</h3>
+    <h3>📡 Mesh — ${m.connected} sensor${m.connected===1?'':'s'} reporting now · ${m.seen} with environmental data in 24 h · ${nodesTotal} node${nodesTotal===1?'':'s'} on the mesh</h3>
     <p class="tiny" style="margin:0 0 0.6rem;">
       Averages across connected sensors: <strong style="font-weight:500;">${esc(fmtMeshAvg(m.averages,true)||'—')}</strong>
       · updated ${esc(m.updated)}.
       The averages are context; the cell's reading is the sensing <em>uptime</em> — whether the neighbourhood knows its own air.
-      Any new sensor that joins the same Meshtastic mesh appears here on the next refresh — nothing to configure.</p>
+      Every node of the mesh is listed — the ones marked <em>node</em> are reachable but not reporting environmental data (no sensor attached, or their Telemetry module is off: enable it on that node in the Meshtastic app, or plug it here and run <code>--enable-env</code>).</p>
     <div class="matrix-scroll"><table class="simple">
-      <tr><th>Sensor</th><th>Temp</th><th>Humidity</th><th>Pressure</th><th>Position</th><th>Last seen</th><th>Uptime 24 h</th></tr>
-      ${rows || '<tr><td colspan="7" class="tiny">No sensors reported yet — is the bridge running and the gateway publishing JSON?</td></tr>'}
+      <tr><th>Node</th><th>Temp</th><th>Humidity</th><th>Pressure</th><th>IAQ</th><th>Battery</th><th>Position</th><th>Last seen</th><th>Uptime 24 h</th></tr>
+      ${rows || '<tr><td colspan="9" class="tiny">No nodes seen yet — is the bridge running?</td></tr>'}
     </table></div>
     ${MODE.get()==='sim' ? '' : `<div style="margin-top:0.6rem; display:flex; gap:8px; align-items:center;">
       <button type="button" class="btn" id="meshRefresh">Refresh from bridge</button>
@@ -1356,6 +1365,7 @@ function meshFromJson(json){
     seen: json.sensors_seen_24h != null ? json.sensors_seen_24h : json.sensors.length,
     averages: json.averages || {},
     sensors: json.sensors,
+    nodes: Array.isArray(json.mesh_nodes) ? json.mesh_nodes : null,
     updated: json.updated_at || new Date().toISOString()
   };
 }

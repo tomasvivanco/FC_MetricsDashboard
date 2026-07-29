@@ -119,7 +119,7 @@ class TelemetryStore:
     # -- ingest -----------------------------------------------------------
     def _node(self, nid):
         return self.nodes.setdefault(nid, {
-            "name": None, "short": None, "env": None, "env_ts": 0,
+            "name": None, "short": None, "env": None, "env_ts": 0, "dev": None,
             "pos": None, "last_seen": 0, "buckets": set()})
 
     def prune(self, now=None):
@@ -145,6 +145,13 @@ class TelemetryStore:
             if shortname: n["short"] = shortname
             n["last_seen"] = now or time.time()
 
+    def record_device(self, nid, dev, now=None):
+        """Battery / voltage — every node has these, sensor or not."""
+        with self.lock:
+            n = self._node(nid)
+            n["dev"] = dict(n.get("dev") or {}, **dev)
+            n["last_seen"] = max(n.get("last_seen") or 0, now or time.time())
+
     def record_position(self, nid, lat, lng, now=None):
         with self.lock:
             n = self._node(nid)
@@ -158,10 +165,23 @@ class TelemetryStore:
             self.prune(now)
             total = WINDOW_S // BUCKET_S
             mesh_buckets = set()
-            sensors, connected = [], []
+            sensors, connected, mesh_nodes = [], [], []
             for nid, n in sorted(self.nodes.items()):
-                if not n["buckets"] and not n["env"]:
-                    continue                      # never sent telemetry — a router, not a sensor
+                is_sensor = bool(n["buckets"] or n["env"])
+                mesh_nodes.append({
+                    "node": nid,
+                    "name": n["name"] or nid,
+                    "short": n["short"],
+                    "is_sensor": is_sensor,
+                    "connected": (now - n["env_ts"]) <= active_s if n["env_ts"] else False,
+                    "last": n["env"],
+                    "dev": n.get("dev"),
+                    "last_seen": iso(n["last_seen"]) if n["last_seen"] else None,
+                    "position": n["pos"],
+                    "uptime_24h_pct": round(100.0 * len(n["buckets"]) / total, 1) if is_sensor else None,
+                })
+                if not is_sensor:
+                    continue                      # never sent env telemetry — a router, not a sensor
                 mesh_buckets |= n["buckets"]
                 is_conn = (now - n["env_ts"]) <= active_s if n["env_ts"] else False
                 s = {
@@ -192,6 +212,8 @@ class TelemetryStore:
                 "buckets_filled": len(mesh_buckets),
                 "buckets_total": total,
                 "sensors_connected": len(connected),
+                "mesh_nodes": mesh_nodes,
+                "nodes_total": len(mesh_nodes),
                 "sensors_seen_24h": len(sensors),
                 "averages": averages,
                 "sensors": sensors,
@@ -238,6 +260,13 @@ def handle_mqtt_message(topic, payload_bytes, node_filter=None):
         return
     t, p = msg.get("type"), msg.get("payload") or {}
     if t == "telemetry":
+        dev = {}
+        if isinstance(p.get("battery_level"), (int, float)):
+            dev["battery_pct"] = min(100, round(float(p["battery_level"])))
+        if isinstance(p.get("voltage"), (int, float)):
+            dev["voltage_v"] = round(float(p["voltage"]), 2)
+        if dev:
+            STORE.record_device(nid, dev)
         env = {out: round(float(p[k]), 2) for k, out in ENV_KEYS.items()
                if isinstance(p.get(k), (int, float))}
         if env:
@@ -319,6 +348,14 @@ def _ingest_serial_packet(packet, node_filter=None):
         return
     port = d.get("portnum")
     if port == "TELEMETRY_APP":
+        dm = (d.get("telemetry") or {}).get("deviceMetrics") or {}
+        if isinstance(dm.get("batteryLevel"), (int, float)) or isinstance(dm.get("voltage"), (int, float)):
+            dev = {}
+            if isinstance(dm.get("batteryLevel"), (int, float)):
+                dev["battery_pct"] = min(100, round(float(dm["batteryLevel"])))
+            if isinstance(dm.get("voltage"), (int, float)):
+                dev["voltage_v"] = round(float(dm["voltage"]), 2)
+            STORE.record_device(nid, dev)
         src = (d.get("telemetry") or {}).get("environmentMetrics") or {}
         env = {}
         for k_src, k_out in (("temperature", "temperature_c"),
@@ -439,6 +476,14 @@ def _ingest_nodedb(nodes, node_filter=None):
         lat, lng = pos.get("latitude"), pos.get("longitude")
         if isinstance(lat, (int, float)) and isinstance(lng, (int, float)) and (lat or lng):
             STORE.record_position(key, lat, lng)
+        dm = n.get("deviceMetrics") or {}
+        dev = {}
+        if isinstance(dm.get("batteryLevel"), (int, float)):
+            dev["battery_pct"] = min(100, round(float(dm["batteryLevel"])))
+        if isinstance(dm.get("voltage"), (int, float)):
+            dev["voltage_v"] = round(float(dm["voltage"]), 2)
+        if dev:
+            STORE.record_device(key, dev, now=n.get("lastHeard"))
         em = n.get("environmentMetrics") or {}
         env = {}
         for src, outk in (("temperature", "temperature_c"),
@@ -824,6 +869,18 @@ def selftest():
     fake_nodes["!8f494c08"]["environmentMetrics"]["temperature"] = 25.5
     checks.append(("node DB newer reading updates", _ingest_nodedb(fake_nodes) == 1
                    and STORE.nodes["!8f494c08"]["env"]["temperature_c"] == 25.5))
+
+    # mesh_nodes: ALL nodes visible, sensors and plain nodes alike
+    fake_nodes["!f6baca57"]["deviceMetrics"] = {"batteryLevel": 87, "voltage": 4.05}
+    _ingest_nodedb(fake_nodes)
+    snx = STORE.snapshot()
+    watcher = next((x for x in snx["mesh_nodes"] if x["node"] == "!f6baca57"), None)
+    checks.append(("plain nodes appear in mesh_nodes with battery",
+                   watcher is not None and watcher["is_sensor"] is False
+                   and (watcher["dev"] or {}).get("battery_pct") == 87))
+    checks.append(("sensors list still env-only",
+                   not any(x["node"] == "!f6baca57" for x in snx["sensors"])
+                   and snx["nodes_total"] >= len(snx["sensors"])))
 
     # builtin MQTT codec, offline
     class _Fake:

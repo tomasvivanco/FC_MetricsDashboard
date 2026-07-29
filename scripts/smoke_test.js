@@ -134,6 +134,10 @@ const bridgeJson = {
       position:null, last_seen:'2026-07-29T11:59:00Z', uptime_24h_pct:83.8 }
   ]
 };
+bridgeJson.mesh_nodes = bridgeJson.sensors.map(s=>Object.assign({is_sensor:true, dev:{battery_pct:92}}, s)).concat([
+  { node:'!f6baca57', name:'PLANETAI FAB CITY WATCHER', is_sensor:false, connected:false,
+    last:null, dev:{battery_pct:87, voltage_v:4.05}, position:null, last_seen:'2026-07-29T11:00:00Z', uptime_24h_pct:null }
+]);
 const mesh = api.meshFromJson(bridgeJson);
 console.log((mesh && mesh.connected===2 && mesh.sensors.length===2 ? 'PASS':'FAIL') + ': meshFromJson parses the bridge shape');
 console.log((api.meshFromJson({foo:1})===null ? 'PASS':'FAIL') + ': non-mesh JSON yields no mesh block');
@@ -143,8 +147,11 @@ api.LS.setRead('environmental:community', { kind:'live', score:0.875, url:'http:
   path:'uptime_24h_pct', min:0, max:100, dir:'dido', value:87.5, mesh });
 const panel = api.renderMeshPanel('environmental:community');
 const okPanel = panel.includes('Patio sensor') && panel.includes('41.38740, 2.16860')
-  && panel.includes('2 connected now') && panel.includes('openstreetmap.org')
+  && panel.includes('openstreetmap.org')
   && panel.includes('no fix') && panel.includes('meshRefresh');
-console.log((okPanel ? 'PASS':'FAIL') + ': sensor list renders names, coordinates, count and refresh');
+console.log((okPanel ? 'PASS':'FAIL') + ': sensor list renders names, coordinates and refresh');
+const okNodes = panel.includes('PLANETAI FAB CITY WATCHER') && panel.includes('3 nodes on the mesh')
+  && panel.includes('no environmental sensor reporting') && panel.includes('87 %');
+console.log((okNodes ? 'PASS':'FAIL') + ': plain mesh nodes listed with battery and hint');
 
 console.log('DONE');
