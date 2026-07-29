@@ -2141,6 +2141,22 @@ buildMatrix();
 buildCityChips();
 renderCity();
 buildCardTable();
+
+/* Live readings poll themselves. Every saved live reading with an endpoint
+   is re-fetched quietly on load and then once a minute — so a bridge on
+   localhost keeps its cell genuinely live, sensor list included. Failures
+   are silent: the last value stays, stamped with its fetch time. */
+function pollLiveReadings(){
+  if(LS.wsOn() || MODE.get()==='sim') return;
+  cellKeys().forEach(k=>{
+    const r = LS.read(k);
+    if(r && r.kind==='live' && r.url){
+      liveFetch(k, {url:r.url, path:r.path, min:r.min, max:r.max, dir:r.dir}, null);
+    }
+  });
+}
+setTimeout(pollLiveReadings, 2500);
+setInterval(pollLiveReadings, 60000);
 </script>
 </body>
 </html>

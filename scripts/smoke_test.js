@@ -48,14 +48,15 @@ const BlobStub = function(){};
 const FileReaderStub = function(){ this.readAsText = ()=>{}; };
 const confirmStub = () => false;
 const setTimeoutStub = (fn) => { try{ fn(); }catch(e){} return 0; };
+const setIntervalStub = () => 0;   // never fires — a real interval would keep Node alive
 
 const src = dataJs + '\n' + m[1] + `
 ;return { fitAxes, derivedFor, modelState, narrativeFor, tierStates, collectScores, MODE, SIMST, RHOEST, LS, normalise, SIM, CELLS, ingestCsv, SCHEMA_VERSION, meshFromJson, fmtMeshAvg, renderMeshPanel };`;
 
 let api;
 try {
-  api = new Function('document','window','navigator','fetch','URL','Blob','FileReader','confirm','setTimeout','location', src)(
-    document, window, navigator, fetchStub, URLstub, BlobStub, FileReaderStub, confirmStub, setTimeoutStub, {href:''});
+  api = new Function('document','window','navigator','fetch','URL','Blob','FileReader','confirm','setTimeout','setInterval','location', src)(
+    document, window, navigator, fetchStub, URLstub, BlobStub, FileReaderStub, confirmStub, setTimeoutStub, setIntervalStub, {href:''});
   console.log('PASS: full script boots without throwing');
 } catch (e) {
   console.error('FAIL at boot:', e.message);
