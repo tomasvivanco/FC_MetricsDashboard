@@ -32,6 +32,14 @@ like  msh/<region>/2/json/<channel>/!<gateway-id>
 
 Usage
 -----
+    # node plugged into THIS computer via USB (simplest — auto-detects port):
+    python3 scripts/meshtastic_bridge.py --serial
+    #   needs once:  pip3 install meshtastic
+
+    # no broker on the network? BE the broker (gateway points at this machine):
+    python3 scripts/meshtastic_bridge.py --listen
+
+    # classic: subscribe to an MQTT broker
     python3 scripts/meshtastic_bridge.py --broker mqtt.meshtastic.org \\
         --user meshdev --password large4cats --topic 'msh/EU_868/2/json/#'
 
@@ -294,6 +302,88 @@ def serve(port, active_s=3600):
     return httpd
 
 
+"""── Serial mode (--serial) — the node is plugged into THIS computer ──────
+No WiFi, no MQTT, no broker: telemetry is read straight off the USB
+port via the official meshtastic library (pip3 install meshtastic).
+Every node of the mesh reaches us through the plugged gateway."""
+
+
+def _ingest_serial_packet(packet, node_filter=None):
+    """Map a decoded meshtastic-python packet into the store. Pure — testable."""
+    d = packet.get("decoded") or {}
+    nid = packet.get("fromId")
+    if not nid:
+        n = packet.get("from")
+        nid = "!%08x" % (n & 0xFFFFFFFF) if isinstance(n, int) else "?"
+    if node_filter and nid not in node_filter:
+        return
+    port = d.get("portnum")
+    if port == "TELEMETRY_APP":
+        src = (d.get("telemetry") or {}).get("environmentMetrics") or {}
+        env = {}
+        for k_src, k_out in (("temperature", "temperature_c"),
+                             ("relativeHumidity", "relative_humidity_pct"),
+                             ("barometricPressure", "barometric_pressure_hpa")):
+            v = src.get(k_src)
+            if isinstance(v, (int, float)):
+                env[k_out] = round(float(v), 2)
+        if env:
+            STORE.record_telemetry(nid, env)
+            _log(f"✓ environment telemetry from {nid}: " + " ".join(f"{k}={v}" for k, v in env.items()))
+        else:
+            _log(f"· telemetry from {nid} without environment metrics (battery/airtime only)")
+    elif port == "POSITION_APP":
+        p = d.get("position") or {}
+        lat, lng = p.get("latitude"), p.get("longitude")
+        if lat is None and isinstance(p.get("latitudeI"), int):
+            lat = p["latitudeI"] / 1e7
+        if lng is None and isinstance(p.get("longitudeI"), int):
+            lng = p["longitudeI"] / 1e7
+        if isinstance(lat, (int, float)) and isinstance(lng, (int, float)) and (lat or lng):
+            STORE.record_position(nid, float(lat), float(lng))
+            _log(f"· position for {nid}: {lat:.5f}, {lng:.5f}")
+    elif port == "NODEINFO_APP":
+        u = d.get("user") or {}
+        STORE.record_nodeinfo(u.get("id") or nid, u.get("longName"), u.get("shortName"))
+        _log(f"· nodeinfo: {nid} is '{u.get('longName') or '?'}'")
+
+
+def run_serial(args, node_filter):
+    try:
+        from meshtastic.serial_interface import SerialInterface
+        from pubsub import pub
+    except ImportError:
+        sys.exit("Serial mode needs the official library. Run once:\n\n    pip3 install meshtastic\n\nthen start the bridge again with --serial.")
+
+    def on_receive(packet, interface=None):
+        try:
+            _ingest_serial_packet(packet, node_filter)
+        except Exception:
+            pass
+
+    pub.subscribe(on_receive, "meshtastic.receive")
+    dev = None if args.serial in (None, "auto") else args.serial
+    iface = SerialInterface(devPath=dev)
+
+    # seed names & positions from the node DB the gateway already holds
+    try:
+        for nid, n in (iface.nodes or {}).items():
+            u = n.get("user") or {}
+            key = u.get("id") or nid
+            if u.get("longName") or u.get("shortName"):
+                STORE.record_nodeinfo(key, u.get("longName"), u.get("shortName"))
+            pos = n.get("position") or {}
+            lat, lng = pos.get("latitude"), pos.get("longitude")
+            if isinstance(lat, (int, float)) and isinstance(lng, (int, float)) and (lat or lng):
+                STORE.record_position(key, lat, lng)
+        _log(f"Serial link up — node DB seeded with {len(iface.nodes or {})} node(s). "
+             f"Environment telemetry arrives on the sensor's own interval "
+             f"(default 30 min — lower it in Module config → Telemetry to see data sooner).")
+    except Exception:
+        pass
+    return iface
+
+
 """── Minimal MQTT 3.1.1 client — stdlib only, subscribe/QoS-0 ─────────────
 Enough protocol for this job: CONNECT, SUBSCRIBE, receive PUBLISH,
 answer keepalive with PINGREQ, reconnect with backoff. Used when
@@ -543,6 +633,29 @@ def selftest():
         ("mesh uptime ~25%", abs(s["uptime_24h_pct"] - 25.0) < 0.5),
         ("per-node uptime present", all("uptime_24h_pct" in x for x in s["sensors"])),
     ]
+    # serial-mode packet mapping (meshtastic-python decoded shapes), offline
+    _ingest_serial_packet({"fromId": "!aabbccdd", "decoded": {"portnum": "TELEMETRY_APP",
+        "telemetry": {"environmentMetrics": {"temperature": 24.3, "relativeHumidity": 55.0,
+                                             "barometricPressure": 1009.8}}}})
+    _ingest_serial_packet({"fromId": "!aabbccdd", "decoded": {"portnum": "POSITION_APP",
+        "position": {"latitude": -33.44890, "longitude": -70.66930}}})
+    _ingest_serial_packet({"fromId": "!aabbccdd", "decoded": {"portnum": "NODEINFO_APP",
+        "user": {"id": "!aabbccdd", "longName": "Sensor patio PC", "shortName": "PC1"}}})
+    sn = STORE.snapshot()
+    ser = next((x for x in sn["sensors"] if x["node"] == "!aabbccdd"), None)
+    checks.append(("serial telemetry mapped", ser is not None and ser["last"]["temperature_c"] == 24.3
+                   and ser["last"]["barometric_pressure_hpa"] == 1009.8))
+    checks.append(("serial position + name mapped", ser is not None
+                   and ser["position"] == {"lat": -33.4489, "lng": -70.6693}
+                   and ser["name"] == "Sensor patio PC"))
+    _ingest_serial_packet({"from": 12345, "decoded": {"portnum": "POSITION_APP",
+        "position": {"latitudeI": 413874000, "longitudeI": 21686000}}})
+    sn2 = STORE.snapshot()
+    checks.append(("integer position decoded via from-num id",
+                   any(x["node"] == "!00003039" and x["position"] == {"lat": 41.3874, "lng": 2.1686}
+                       for x in sn2["sensors"] if x["position"]) or
+                   ("!00003039" in STORE.nodes and STORE.nodes["!00003039"]["pos"] == {"lat": 41.3874, "lng": 2.1686})))
+
     # builtin MQTT codec, offline
     class _Fake:
         def __init__(self, data): self.data = data
@@ -587,7 +700,8 @@ def selftest():
     got = json.load(urllib.request.urlopen("http://127.0.0.1:8787/reading.json"))
     fresh = STORE.snapshot()
     same = (got["sensors_connected"] == fresh["sensors_connected"]
-            and len(got["sensors"]) == len(fresh["sensors"]) == 3)   # 2 fakes + 1 via mini-broker
+            and len(got["sensors"]) == len(fresh["sensors"]) == 4)   # 2 fakes + 1 mini-broker + 1 serial
+            # (the position-only serial node is rightly excluded: no telemetry, not a sensor)
     print(("PASS" if same else "FAIL") + ": HTTP endpoint serves the same picture")
     html = urllib.request.urlopen("http://127.0.0.1:8787/").read()
     okhtml = b"Fab City Index" in html and b"assets/data.js" in html
@@ -610,6 +724,8 @@ def main():
     ap.add_argument("--http-port", type=int, default=8787)
     ap.add_argument("--listen", action="store_true", help="no broker needed: BE the broker — the gateway connects straight to this machine")
     ap.add_argument("--listen-port", type=int, default=1883)
+    ap.add_argument("--serial", nargs="?", const="auto", default=None, metavar="PORT",
+                    help="node plugged into THIS computer via USB — reads telemetry off the port (auto-detects; needs: pip3 install meshtastic)")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
 
@@ -618,7 +734,10 @@ def main():
 
     node_filter = set(x.strip() for x in args.node.split(",")) if args.node else None
     serve(args.http_port, active_s=args.active_window * 60)
-    if args.listen:
+    if args.serial is not None:
+        run_serial(args, node_filter)
+        mqtt_line = f"serial (USB){'' if args.serial=='auto' else ' on '+args.serial} — reading the mesh through the plugged node"
+    elif args.listen:
         run_mini_broker(args, node_filter)
         try:
             probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
