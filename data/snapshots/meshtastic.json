@@ -1,0 +1,169 @@
+{
+ "source": "Meshtastic mesh via local bridge",
+ "binds_to": {
+  "cell": "environmental:community",
+  "indicator": "Neighbourhood sensing uptime"
+ },
+ "updated_at": "2026-07-30T11:19:55Z",
+ "uptime_24h_pct": 2.8,
+ "buckets_filled": 8,
+ "buckets_total": 288,
+ "sensors_connected": 3,
+ "mesh_nodes": [
+  {
+   "node": "!8f491db0",
+   "name": "aquasun",
+   "short": "aqua",
+   "is_sensor": false,
+   "connected": false,
+   "last": null,
+   "dev": null,
+   "last_seen": "2026-07-30T10:42:33Z",
+   "position": null,
+   "uptime_24h_pct": null
+  },
+  {
+   "node": "!8f494c08",
+   "name": "Meshtastic 4c08",
+   "short": "4c08",
+   "is_sensor": true,
+   "connected": true,
+   "last": {
+    "temperature_c": 27.01,
+    "relative_humidity_pct": 49.15,
+    "barometric_pressure_hpa": 1003.87,
+    "iaq": 50.0
+   },
+   "dev": {
+    "battery_pct": 100,
+    "voltage_v": -0.0
+   },
+   "last_seen": "2026-07-30T11:06:09Z",
+   "position": {
+    "lat": 42.36196,
+    "lng": -71.10012
+   },
+   "uptime_24h_pct": 2.8
+  },
+  {
+   "node": "!8f496adc",
+   "name": "Meshtastic 6adc",
+   "short": "6adc",
+   "is_sensor": true,
+   "connected": true,
+   "last": {
+    "temperature_c": 26.04,
+    "relative_humidity_pct": 58.44,
+    "barometric_pressure_hpa": 1003.65,
+    "iaq": 114.0
+   },
+   "dev": null,
+   "last_seen": "2026-07-30T11:02:53Z",
+   "position": null,
+   "uptime_24h_pct": 1.0
+  },
+  {
+   "node": "!8f501d0c",
+   "name": "PLANETAI NODE",
+   "short": "Luc",
+   "is_sensor": false,
+   "connected": false,
+   "last": null,
+   "dev": null,
+   "last_seen": "2026-07-30T10:42:33Z",
+   "position": {
+    "lat": 42.33626,
+    "lng": -71.11967
+   },
+   "uptime_24h_pct": null
+  },
+  {
+   "node": "!f6baca57",
+   "name": "PLANETAI FAB CITY WATCHER",
+   "short": "PLAN",
+   "is_sensor": true,
+   "connected": true,
+   "last": {
+    "temperature_c": 26.16,
+    "lux": 0.0
+   },
+   "dev": null,
+   "last_seen": "2026-07-30T11:01:09Z",
+   "position": {
+    "lat": 42.33626,
+    "lng": -71.11967
+   },
+   "uptime_24h_pct": 1.0
+  }
+ ],
+ "nodes_total": 5,
+ "sensors_seen_24h": 3,
+ "averages": {
+  "barometric_pressure_hpa": 1003.76,
+  "temperature_c": 26.4,
+  "relative_humidity_pct": 53.8,
+  "lux": 0.0,
+  "iaq": 82.0
+ },
+ "sensors": [
+  {
+   "node": "!8f494c08",
+   "name": "Meshtastic 4c08",
+   "short": "4c08",
+   "connected": true,
+   "last": {
+    "temperature_c": 27.01,
+    "relative_humidity_pct": 49.15,
+    "barometric_pressure_hpa": 1003.87,
+    "iaq": 50.0
+   },
+   "last_seen": "2026-07-30T11:06:09Z",
+   "position": {
+    "lat": 42.36196,
+    "lng": -71.10012
+   },
+   "uptime_24h_pct": 2.8
+  },
+  {
+   "node": "!8f496adc",
+   "name": "Meshtastic 6adc",
+   "short": "6adc",
+   "connected": true,
+   "last": {
+    "temperature_c": 26.04,
+    "relative_humidity_pct": 58.44,
+    "barometric_pressure_hpa": 1003.65,
+    "iaq": 114.0
+   },
+   "last_seen": "2026-07-30T11:02:53Z",
+   "position": null,
+   "uptime_24h_pct": 1.0
+  },
+  {
+   "node": "!f6baca57",
+   "name": "PLANETAI FAB CITY WATCHER",
+   "short": "PLAN",
+   "connected": true,
+   "last": {
+    "temperature_c": 26.16,
+    "lux": 0.0
+   },
+   "last_seen": "2026-07-30T11:01:09Z",
+   "position": {
+    "lat": 42.33626,
+    "lng": -71.11967
+   },
+   "uptime_24h_pct": 1.0
+  }
+ ],
+ "messages_24h": 26,
+ "active_window_s": 3600,
+ "normalisation": {
+  "scale_min": 0,
+  "scale_max": 100,
+  "direction": "dido"
+ },
+ "observation_date": "2026-07-30",
+ "published_at": "2026-07-30T11:19:55Z",
+ "note": "Published by scripts/meshtastic_bridge.py --publish. Git history is the provenance ledger."
+}
