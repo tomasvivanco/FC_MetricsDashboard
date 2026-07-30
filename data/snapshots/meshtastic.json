@@ -4,9 +4,9 @@
   "cell": "environmental:community",
   "indicator": "Neighbourhood sensing uptime"
  },
- "updated_at": "2026-07-30T19:00:31Z",
- "uptime_24h_pct": 3.5,
- "buckets_filled": 10,
+ "updated_at": "2026-07-30T19:05:33Z",
+ "uptime_24h_pct": 4.2,
+ "buckets_filled": 12,
  "buckets_total": 288,
  "sensors_connected": 2,
  "mesh_nodes": [
@@ -29,21 +29,21 @@
    "is_sensor": true,
    "connected": true,
    "last": {
-    "temperature_c": 23.59,
-    "relative_humidity_pct": 56.53,
-    "barometric_pressure_hpa": 1008.2,
+    "temperature_c": 24.47,
+    "relative_humidity_pct": 54.22,
+    "barometric_pressure_hpa": 1008.25,
     "iaq": 49.0
    },
    "dev": {
     "battery_pct": 100,
     "voltage_v": 6.31
    },
-   "last_seen": "2026-07-30T18:59:31Z",
+   "last_seen": "2026-07-30T19:05:31Z",
    "position": {
     "lat": 42.36029,
     "lng": -71.08731
    },
-   "uptime_24h_pct": 3.5
+   "uptime_24h_pct": 4.2
   },
   {
    "node": "!8f496adc",
@@ -96,26 +96,26 @@
    "is_sensor": true,
    "connected": true,
    "last": {
-    "temperature_c": 31.26,
+    "temperature_c": 30.56,
     "lux": 81.0
    },
    "dev": null,
-   "last_seen": "2026-07-30T18:57:01Z",
+   "last_seen": "2026-07-30T19:02:01Z",
    "position": {
     "lat": 42.33626,
     "lng": -71.11967
    },
-   "uptime_24h_pct": 1.4
+   "uptime_24h_pct": 1.7
   }
  ],
  "nodes_total": 6,
  "sensors_seen_24h": 3,
  "averages": {
-  "temperature_c": 27.43,
+  "temperature_c": 27.52,
   "iaq": 49.0,
-  "relative_humidity_pct": 56.53,
+  "relative_humidity_pct": 54.22,
   "lux": 81.0,
-  "barometric_pressure_hpa": 1008.2
+  "barometric_pressure_hpa": 1008.25
  },
  "sensors": [
   {
@@ -124,17 +124,17 @@
    "short": "4c08",
    "connected": true,
    "last": {
-    "temperature_c": 23.59,
-    "relative_humidity_pct": 56.53,
-    "barometric_pressure_hpa": 1008.2,
+    "temperature_c": 24.47,
+    "relative_humidity_pct": 54.22,
+    "barometric_pressure_hpa": 1008.25,
     "iaq": 49.0
    },
-   "last_seen": "2026-07-30T18:59:31Z",
+   "last_seen": "2026-07-30T19:05:31Z",
    "position": {
     "lat": 42.36029,
     "lng": -71.08731
    },
-   "uptime_24h_pct": 3.5
+   "uptime_24h_pct": 4.2
   },
   {
    "node": "!8f496adc",
@@ -157,18 +157,18 @@
    "short": "PLAN",
    "connected": true,
    "last": {
-    "temperature_c": 31.26,
+    "temperature_c": 30.56,
     "lux": 81.0
    },
-   "last_seen": "2026-07-30T18:57:01Z",
+   "last_seen": "2026-07-30T19:02:01Z",
    "position": {
     "lat": 42.33626,
     "lng": -71.11967
    },
-   "uptime_24h_pct": 1.4
+   "uptime_24h_pct": 1.7
   }
  ],
- "messages_24h": 33,
+ "messages_24h": 40,
  "active_window_s": 3600,
  "normalisation": {
   "scale_min": 0,
@@ -176,6 +176,6 @@
   "direction": "dido"
  },
  "observation_date": "2026-07-30",
- "published_at": "2026-07-30T19:00:31Z",
+ "published_at": "2026-07-30T19:05:33Z",
  "note": "Published by scripts/meshtastic_bridge.py --publish. Git history is the provenance ledger."
 }
