@@ -4,7 +4,7 @@
   "cell": "environmental:community",
   "indicator": "Neighbourhood sensing uptime"
  },
- "updated_at": "2026-07-30T12:18:12Z",
+ "updated_at": "2026-07-30T12:33:14Z",
  "uptime_24h_pct": 2.8,
  "buckets_filled": 8,
  "buckets_total": 288,
@@ -158,6 +158,6 @@
   "direction": "dido"
  },
  "observation_date": "2026-07-30",
- "published_at": "2026-07-30T12:18:12Z",
+ "published_at": "2026-07-30T12:33:14Z",
  "note": "Published by scripts/meshtastic_bridge.py --publish. Git history is the provenance ledger."
 }
