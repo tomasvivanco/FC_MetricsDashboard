@@ -143,7 +143,7 @@ class TelemetryStore:
             n = self._node(nid)
             if longname: n["name"] = longname
             if shortname: n["short"] = shortname
-            n["last_seen"] = now or time.time()
+            if now: n["last_seen"] = max(n.get("last_seen") or 0, now)
 
     def record_device(self, nid, dev, now=None):
         """Battery / voltage — every node has these, sensor or not."""
@@ -156,7 +156,8 @@ class TelemetryStore:
         with self.lock:
             n = self._node(nid)
             n["pos"] = {"lat": round(lat, 5), "lng": round(lng, 5)}
-            n["last_seen"] = now or time.time()
+            if now is None: now = time.time()
+            n["last_seen"] = max(n.get("last_seen") or 0, now)
 
     # -- read -------------------------------------------------------------
     def snapshot(self, now=None, active_s=3600):
@@ -277,7 +278,7 @@ def handle_mqtt_message(topic, payload_bytes, node_filter=None):
             _log(f"· telemetry from {nid} has no environment metrics (battery/airtime only) — "
                  f"check Module config → Telemetry → environment measurement enabled, and that the sensor is detected")
     elif t == "nodeinfo":
-        STORE.record_nodeinfo(p.get("id") or nid, p.get("longname"), p.get("shortname"))
+        STORE.record_nodeinfo(p.get("id") or nid, p.get("longname"), p.get("shortname"), now=time.time())
         _log(f"· nodeinfo: {nid} is '{p.get('longname') or '?'}'")
     elif t == "position":
         lat, lng = p.get("latitude_i"), p.get("longitude_i")
@@ -381,7 +382,7 @@ def _ingest_serial_packet(packet, node_filter=None):
             _log(f"· position for {nid}: {lat:.5f}, {lng:.5f}")
     elif port == "NODEINFO_APP":
         u = d.get("user") or {}
-        STORE.record_nodeinfo(u.get("id") or nid, u.get("longName"), u.get("shortName"))
+        STORE.record_nodeinfo(u.get("id") or nid, u.get("longName"), u.get("shortName"), now=time.time())
         _log(f"· nodeinfo: {nid} is '{u.get('longName') or '?'}'")
 
 
@@ -470,12 +471,14 @@ def _ingest_nodedb(nodes, node_filter=None):
         key = u.get("id") or nid
         if node_filter and key not in node_filter:
             continue
+        heard = n.get("lastHeard")
+        heard = heard if isinstance(heard, (int, float)) and heard > 0 else None
         if u.get("longName") or u.get("shortName"):
-            STORE.record_nodeinfo(key, u.get("longName"), u.get("shortName"))
+            STORE.record_nodeinfo(key, u.get("longName"), u.get("shortName"), now=heard)
         pos = n.get("position") or {}
         lat, lng = pos.get("latitude"), pos.get("longitude")
         if isinstance(lat, (int, float)) and isinstance(lng, (int, float)) and (lat or lng):
-            STORE.record_position(key, lat, lng)
+            STORE.record_position(key, lat, lng, now=heard)
         dm = n.get("deviceMetrics") or {}
         dev = {}
         if isinstance(dm.get("batteryLevel"), (int, float)):
@@ -494,10 +497,19 @@ def _ingest_nodedb(nodes, node_filter=None):
             if isinstance(v, (int, float)):
                 env[outk] = round(float(v), 2)
         if env:
-            ts = n.get("lastHeard") or time.time()
+            ts = n.get("lastHeard")
             cur = STORE.nodes.get(key)
-            if not cur or ts > cur.get("env_ts", 0):
+            changed = not cur or cur.get("env") != env
+            fresh_by_heard = (isinstance(ts, (int, float)) and ts > 0
+                              and (not cur or ts > cur.get("env_ts", 0))
+                              and (time.time() - ts) < WINDOW_S)
+            if changed:
+                # values moved → the reading is fresh NOW, whatever lastHeard says
+                # (a node never hears itself over radio, so its own lastHeard stalls)
+                STORE.record_telemetry(key, env, now=time.time())
+            elif fresh_by_heard:
                 STORE.record_telemetry(key, env, now=min(ts, time.time()))
+            if changed or fresh_by_heard:
                 _log(f"✓ environment telemetry from {key} (node DB): " +
                      " ".join(f"{k}={v}" for k, v in env.items()))
                 count += 1
@@ -559,7 +571,7 @@ def run_serial(args, node_filter):
                 while not state["lost"]:
                     time.sleep(30)
                     _ingest_nodedb(getattr(iface, "nodes", None), node_filter)
-                    if time.time() - last_req >= 300:
+                    if getattr(args, "request_telemetry", False) and time.time() - last_req >= 300:
                         if request_telemetry(iface):
                             _log("· requested environment telemetry from the mesh")
                         last_req = time.time()
@@ -869,6 +881,13 @@ def selftest():
     fake_nodes["!8f494c08"]["environmentMetrics"]["temperature"] = 25.5
     checks.append(("node DB newer reading updates", _ingest_nodedb(fake_nodes) == 1
                    and STORE.nodes["!8f494c08"]["env"]["temperature_c"] == 25.5))
+    # the plugged node never hears itself: lastHeard stalls but values move —
+    # a changed value must still be ingested as fresh
+    fake_nodes["!8f494c08"]["lastHeard"] = int(now) - 7200          # stale
+    fake_nodes["!8f494c08"]["environmentMetrics"]["temperature"] = 26.1
+    checks.append(("changed values beat a stale lastHeard", _ingest_nodedb(fake_nodes) == 1
+                   and STORE.nodes["!8f494c08"]["env"]["temperature_c"] == 26.1
+                   and (time.time() - STORE.nodes["!8f494c08"]["env_ts"]) < 5))
 
     # mesh_nodes: ALL nodes visible, sensors and plain nodes alike
     fake_nodes["!f6baca57"]["deviceMetrics"] = {"batteryLevel": 87, "voltage": 4.05}
@@ -951,6 +970,7 @@ def main():
     ap.add_argument("--listen-port", type=int, default=1883)
     ap.add_argument("--serial", nargs="?", const="auto", default=None, metavar="PORT",
                     help="node plugged into THIS computer via USB — reads telemetry off the port (auto-detects; needs: pip3 install meshtastic)")
+    ap.add_argument("--request-telemetry", action="store_true", help="also broadcast telemetry requests every 5 min (some firmwares print 'No response from node' — harmless)")
     ap.add_argument("--diagnose", action="store_true", help="read the plugged node's real config over USB and say why data is/isn't flowing")
     ap.add_argument("--enable-env", action="store_true", help="diagnose + switch environment telemetry ON (interval 120 s) on the plugged node")
     ap.add_argument("--selftest", action="store_true")
