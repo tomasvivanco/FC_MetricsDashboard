@@ -79,6 +79,39 @@ ENV_KEYS = {
     "barometric_pressure": "barometric_pressure_hpa",
 }
 
+# every metric family a Meshtastic sensor can emit, every key spelling seen
+# in the wild (protobuf-dict camelCase, MQTT-JSON snake_case)
+_ENV_FIELD_MAP = [
+    (("temperature",), "temperature_c"),
+    (("relativeHumidity", "relative_humidity"), "relative_humidity_pct"),
+    (("barometricPressure", "barometric_pressure"), "barometric_pressure_hpa"),
+    (("iaq",), "iaq"),
+    (("lux",), "lux"),
+]
+_AQ_FIELD_MAP = [
+    (("pm25Standard", "pm25_standard"), "pm25_ugm3"),
+    (("pm100Standard", "pm100_standard"), "pm10_ugm3"),
+    (("pm10Standard", "pm10_standard"), "pm1_ugm3"),
+]
+
+
+def metrics_to_env(em, aq=None):
+    """Fold environment + air-quality metric dicts into our canonical keys."""
+    env = {}
+    for keys, out in _ENV_FIELD_MAP:
+        for k in keys:
+            v = (em or {}).get(k)
+            if isinstance(v, (int, float)):
+                env[out] = round(float(v), 2)
+                break
+    for keys, out in _AQ_FIELD_MAP:
+        for k in keys:
+            v = (aq or {}).get(k)
+            if isinstance(v, (int, float)):
+                env[out] = round(float(v), 2)
+                break
+    return env
+
 
 def iso(ts):
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
@@ -268,8 +301,7 @@ def handle_mqtt_message(topic, payload_bytes, node_filter=None):
             dev["voltage_v"] = round(float(p["voltage"]), 2)
         if dev:
             STORE.record_device(nid, dev)
-        env = {out: round(float(p[k]), 2) for k, out in ENV_KEYS.items()
-               if isinstance(p.get(k), (int, float))}
+        env = metrics_to_env(p, p)
         if env:
             STORE.record_telemetry(nid, env)
             _log(f"✓ environment telemetry from {nid}: " +
@@ -338,6 +370,9 @@ port via the official meshtastic library (pip3 install meshtastic).
 Every node of the mesh reaches us through the plugged gateway."""
 
 
+_DEBUG = False
+
+
 def _ingest_serial_packet(packet, node_filter=None):
     """Map a decoded meshtastic-python packet into the store. Pure — testable."""
     d = packet.get("decoded") or {}
@@ -347,24 +382,22 @@ def _ingest_serial_packet(packet, node_filter=None):
         nid = "!%08x" % (n & 0xFFFFFFFF) if isinstance(n, int) else "?"
     if node_filter and nid not in node_filter:
         return
+    if _DEBUG:
+        _log(f"[debug] packet from {nid} port={d.get('portnum')} decoded-keys={sorted(d.keys())}")
     port = d.get("portnum")
-    if port == "TELEMETRY_APP":
-        dm = (d.get("telemetry") or {}).get("deviceMetrics") or {}
-        if isinstance(dm.get("batteryLevel"), (int, float)) or isinstance(dm.get("voltage"), (int, float)):
-            dev = {}
-            if isinstance(dm.get("batteryLevel"), (int, float)):
-                dev["battery_pct"] = min(100, round(float(dm["batteryLevel"])))
-            if isinstance(dm.get("voltage"), (int, float)):
-                dev["voltage_v"] = round(float(dm["voltage"]), 2)
+    tele = d.get("telemetry") or {}
+    if port in ("TELEMETRY_APP", 67) or tele:
+        dm = tele.get("deviceMetrics") or tele.get("device_metrics") or {}
+        dev = {}
+        if isinstance(dm.get("batteryLevel", dm.get("battery_level")), (int, float)):
+            dev["battery_pct"] = min(100, round(float(dm.get("batteryLevel", dm.get("battery_level")))))
+        if isinstance(dm.get("voltage"), (int, float)):
+            dev["voltage_v"] = round(float(dm["voltage"]), 2)
+        if dev:
             STORE.record_device(nid, dev)
-        src = (d.get("telemetry") or {}).get("environmentMetrics") or {}
-        env = {}
-        for k_src, k_out in (("temperature", "temperature_c"),
-                             ("relativeHumidity", "relative_humidity_pct"),
-                             ("barometricPressure", "barometric_pressure_hpa")):
-            v = src.get(k_src)
-            if isinstance(v, (int, float)):
-                env[k_out] = round(float(v), 2)
+        env = metrics_to_env(
+            tele.get("environmentMetrics") or tele.get("environment_metrics"),
+            tele.get("airQualityMetrics") or tele.get("air_quality_metrics"))
         if env:
             STORE.record_telemetry(nid, env)
             _log(f"✓ environment telemetry from {nid}: " + " ".join(f"{k}={v}" for k, v in env.items()))
@@ -487,15 +520,7 @@ def _ingest_nodedb(nodes, node_filter=None):
             dev["voltage_v"] = round(float(dm["voltage"]), 2)
         if dev:
             STORE.record_device(key, dev, now=n.get("lastHeard"))
-        em = n.get("environmentMetrics") or {}
-        env = {}
-        for src, outk in (("temperature", "temperature_c"),
-                          ("relativeHumidity", "relative_humidity_pct"),
-                          ("barometricPressure", "barometric_pressure_hpa"),
-                          ("iaq", "iaq")):
-            v = em.get(src)
-            if isinstance(v, (int, float)):
-                env[outk] = round(float(v), 2)
+        env = metrics_to_env(n.get("environmentMetrics"), n.get("airQualityMetrics"))
         if env:
             ts = n.get("lastHeard")
             cur = STORE.nodes.get(key)
@@ -901,6 +926,23 @@ def selftest():
                    not any(x["node"] == "!f6baca57" for x in snx["sensors"])
                    and snx["nodes_total"] >= len(snx["sensors"])))
 
+    # air-quality-only node (e.g. a PM2.5 watcher): must count as a sensor
+    _ingest_serial_packet({"fromId": "!0a1b2c3d", "decoded": {"portnum": "TELEMETRY_APP",
+        "telemetry": {"airQualityMetrics": {"pm25Standard": 12, "pm100Standard": 18}}}})
+    aq = STORE.nodes.get("!0a1b2c3d")
+    checks.append(("air-quality metrics count as sensing", aq is not None
+                   and aq["env"]["pm25_ugm3"] == 12 and aq["env"]["pm10_ugm3"] == 18))
+    # numeric portnum + snake_case keys (other decode paths in the wild)
+    _ingest_serial_packet({"fromId": "!0a1b2c3d", "decoded": {"portnum": 67,
+        "telemetry": {"environment_metrics": {"temperature": 19.0, "relative_humidity": 61.0}}}})
+    checks.append(("numeric portnum + snake_case keys ingested",
+                   STORE.nodes["!0a1b2c3d"]["env"].get("temperature_c") == 19.0))
+    # MQTT JSON with air-quality fields
+    handle_mqtt_message("msh/t", mk({"from": 0x0eeeeeee, "type": "telemetry",
+        "payload": {"pm25_standard": 33, "temperature": 22.0}}))
+    checks.append(("MQTT air-quality payload ingested",
+                   STORE.nodes.get("!0eeeeeee", {}).get("env", {}).get("pm25_ugm3") == 33))
+
     # builtin MQTT codec, offline
     class _Fake:
         def __init__(self, data): self.data = data
@@ -970,6 +1012,7 @@ def main():
     ap.add_argument("--listen-port", type=int, default=1883)
     ap.add_argument("--serial", nargs="?", const="auto", default=None, metavar="PORT",
                     help="node plugged into THIS computer via USB — reads telemetry off the port (auto-detects; needs: pip3 install meshtastic)")
+    ap.add_argument("--debug", action="store_true", help="log every packet reaching the bridge, with its port and keys")
     ap.add_argument("--request-telemetry", action="store_true", help="also broadcast telemetry requests every 5 min (some firmwares print 'No response from node' — harmless)")
     ap.add_argument("--diagnose", action="store_true", help="read the plugged node's real config over USB and say why data is/isn't flowing")
     ap.add_argument("--enable-env", action="store_true", help="diagnose + switch environment telemetry ON (interval 120 s) on the plugged node")
@@ -978,6 +1021,9 @@ def main():
 
     if args.selftest:
         sys.exit(selftest())
+    if args.debug:
+        global _DEBUG
+        _DEBUG = True
     if args.diagnose or args.enable_env:
         diagnose(args, enable_env=args.enable_env)
         sys.exit(0)

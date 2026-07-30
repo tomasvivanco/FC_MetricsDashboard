@@ -1184,6 +1184,7 @@ function renderMeshPanel(key){
         <td>${num(e.relative_humidity_pct,0,' %')}</td>
         <td>${num(e.barometric_pressure_hpa,0,' hPa')}</td>
         <td>${num(e.iaq,0,'')}</td>
+        <td>${num(e.pm25_ugm3,0,'')}</td>
         <td>${num(d.battery_pct,0,' %')}</td>
         <td class="tiny">${pos}</td>
         <td class="tiny">${esc(s.last_seen||'—')}</td>
@@ -1200,8 +1201,8 @@ function renderMeshPanel(key){
       The averages are context; the cell's reading is the sensing <em>uptime</em> — whether the neighbourhood knows its own air.
       Every node of the mesh is listed — the ones marked <em>node</em> are reachable but not reporting environmental data (no sensor attached, or their Telemetry module is off: enable it on that node in the Meshtastic app, or plug it here and run <code>--enable-env</code>).</p>
     <div class="matrix-scroll"><table class="simple">
-      <tr><th>Node</th><th>Temp</th><th>Humidity</th><th>Pressure</th><th>IAQ</th><th>Battery</th><th>Position</th><th>Last seen</th><th>Uptime 24 h</th></tr>
-      ${rows || '<tr><td colspan="9" class="tiny">No nodes seen yet — is the bridge running?</td></tr>'}
+      <tr><th>Node</th><th>Temp</th><th>Humidity</th><th>Pressure</th><th>IAQ</th><th>PM2.5</th><th>Battery</th><th>Position</th><th>Last seen</th><th>Uptime 24 h</th></tr>
+      ${rows || '<tr><td colspan="10" class="tiny">No nodes seen yet — is the bridge running?</td></tr>'}
     </table></div>
     ${MODE.get()==='sim' ? '' : `<div style="margin-top:0.6rem; display:flex; gap:8px; align-items:center;">
       <button type="button" class="btn" id="meshRefresh">Refresh from bridge</button>
@@ -1374,7 +1375,9 @@ function fmtMeshAvg(a, full){
   const parts = [];
   if(typeof a.temperature_c === 'number') parts.push(a.temperature_c.toFixed(1) + ' °C');
   if(typeof a.relative_humidity_pct === 'number') parts.push(a.relative_humidity_pct.toFixed(0) + ' % RH');
+  if(typeof a.pm25_ugm3 === 'number') parts.push('PM2.5 ' + a.pm25_ugm3.toFixed(0));
   if(full && typeof a.barometric_pressure_hpa === 'number') parts.push(a.barometric_pressure_hpa.toFixed(0) + ' hPa');
+  if(full && typeof a.iaq === 'number') parts.push('IAQ ' + a.iaq.toFixed(0));
   return parts.join(' · ');
 }
 function liveFetch(k, cfg, st, after){
