@@ -456,6 +456,74 @@ def git_publish(path):
         return "git error: %s" % e
 
 
+def setup_wifi(args):
+    """One-shot: with the node on USB, write WiFi credentials + MQTT →
+    this machine + JSON output + primary-channel uplink. Order matters:
+    network config goes LAST because the node reboots into WiFi on write."""
+    try:
+        from meshtastic.serial_interface import SerialInterface
+    except ImportError:
+        sys.exit("Needs the official library once:  pip3 install meshtastic")
+    ssid, psk = args.setup_wifi
+    server = args.mqtt_server
+    if not server:
+        try:
+            probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            probe.connect(("8.8.8.8", 80))
+            server = probe.getsockname()[0]
+            probe.close()
+        except Exception:
+            sys.exit("Could not determine this machine's LAN IP — pass --mqtt-server <ip>")
+    print("Connecting over USB…")
+    dev = None if args.serial in (None, "auto") else args.serial
+    iface = SerialInterface(devPath=dev)
+    time.sleep(2)
+    node = iface.localNode
+    print(f"Configuring: MQTT → {server}:1883 (JSON, no auth) · uplink on · WiFi '{ssid}'")
+    try:
+        mq = node.moduleConfig.mqtt
+        mq.enabled = True
+        mq.address = server
+        mq.json_enabled = True
+        mq.encryption_enabled = False
+        mq.tls_enabled = False
+        mq.username = ""
+        mq.password = ""
+        node.writeConfig("mqtt")
+        print("✔ MQTT module written (JSON output enabled)")
+    except Exception as e:
+        print(f"✗ MQTT config failed ({e}) — set it in the app: Module config → MQTT")
+    try:
+        ch = node.channels[0]
+        ch.settings.uplink_enabled = True
+        node.writeChannel(0)
+        print("✔ primary channel uplink enabled")
+    except Exception as e:
+        print(f"✗ channel uplink failed ({e}) — enable it in the app: Channels → primary → Uplink")
+    try:
+        net = node.localConfig.network
+        net.wifi_enabled = True
+        net.wifi_ssid = ssid
+        net.wifi_psk = psk
+        node.writeConfig("network")
+        print("✔ WiFi written — the node is rebooting into WiFi now")
+    except Exception as e:
+        print(f"✗ WiFi config failed ({e}) — set it in the app: Radio config → Network")
+    print("""
+Done. Next:
+  1. Unplug the USB — power the node from battery/charger anywhere in WiFi range.
+     (2.4 GHz networks only: ESP32 does not see 5 GHz.)
+  2. Start the bridge in WiFi mode and leave it running:
+       python3 scripts/meshtastic_bridge.py --listen --publish 5
+  3. Within ~2 min you should see:  Gateway connected from 192.168.x.x
+     then:  ✓ environment telemetry from !xxxx …
+  If macOS asks whether Python may accept incoming connections: Allow.""")
+    try:
+        iface.close()
+    except Exception:
+        pass
+
+
 def diagnose(args, enable_env=False):
     """Read the plugged node's real state over USB and say plainly why
     environment data is or is not flowing. With enable_env=True, switch the
@@ -1065,6 +1133,9 @@ def main():
                     help="every MIN minutes, write data/snapshots/meshtastic.json and git commit+push it — so GitHub Pages shows the mesh to everyone")
     ap.add_argument("--debug", action="store_true", help="log every packet reaching the bridge, with its port and keys")
     ap.add_argument("--request-telemetry", action="store_true", help="also broadcast telemetry requests every 5 min (some firmwares print 'No response from node' — harmless)")
+    ap.add_argument("--setup-wifi", nargs=2, metavar=("SSID", "PASSWORD"), default=None,
+                    help="one-shot over USB: write WiFi + MQTT→this machine + JSON + uplink, then go wireless with --listen")
+    ap.add_argument("--mqtt-server", default=None, metavar="IP", help="override the MQTT server IP written by --setup-wifi (default: this machine's LAN IP)")
     ap.add_argument("--diagnose", action="store_true", help="read the plugged node's real config over USB and say why data is/isn't flowing")
     ap.add_argument("--enable-env", action="store_true", help="diagnose + switch environment telemetry ON (interval 120 s) on the plugged node")
     ap.add_argument("--selftest", action="store_true")
@@ -1075,6 +1146,9 @@ def main():
     if args.debug:
         global _DEBUG
         _DEBUG = True
+    if args.setup_wifi:
+        setup_wifi(args)
+        sys.exit(0)
     if args.diagnose or args.enable_env:
         diagnose(args, enable_env=args.enable_env)
         sys.exit(0)
