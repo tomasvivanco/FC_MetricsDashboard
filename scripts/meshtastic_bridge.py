@@ -419,6 +419,43 @@ def _ingest_serial_packet(packet, node_filter=None):
         _log(f"· nodeinfo: {nid} is '{u.get('longName') or '?'}'")
 
 
+def write_publish_snapshot(active_s, path=None):
+    """Write the current mesh picture as a dated snapshot the dashboard can
+    serve from the repo (GitHub Pages). Same shape as /reading.json plus
+    observation_date + published_at."""
+    snap = STORE.snapshot(active_s=active_s)
+    snap["observation_date"] = time.strftime("%Y-%m-%d", time.gmtime())
+    snap["published_at"] = iso(time.time())
+    snap["note"] = "Published by scripts/meshtastic_bridge.py --publish. Git history is the provenance ledger."
+    path = path or os.path.join(REPO_ROOT, "data", "snapshots", "meshtastic.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as fh:
+        json.dump(snap, fh, indent=1)
+        fh.write("\n")
+    return path
+
+
+def git_publish(path):
+    """add + commit + push the snapshot. Tolerant: a failed push must never
+    kill the bridge — it reports and retries on the next cycle."""
+    import subprocess
+    rel = os.path.relpath(path, REPO_ROOT)
+    try:
+        subprocess.run(["git", "-C", REPO_ROOT, "add", rel], check=True, capture_output=True, timeout=30)
+        r = subprocess.run(["git", "-C", REPO_ROOT, "commit", "-m",
+                            "Snapshot: meshtastic mesh " + time.strftime("%Y-%m-%d %H:%M")],
+                           capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            return "no changes to publish"
+        p = subprocess.run(["git", "-C", REPO_ROOT, "push"], capture_output=True, text=True, timeout=120)
+        if p.returncode == 0:
+            return "pushed — Pages updates in ~1 min"
+        tail = (p.stderr or p.stdout or "").strip().splitlines()
+        return "committed, but push failed: " + (tail[-1][:140] if tail else "?")
+    except Exception as e:
+        return "git error: %s" % e
+
+
 def diagnose(args, enable_env=False):
     """Read the plugged node's real state over USB and say plainly why
     environment data is or is not flowing. With enable_env=True, switch the
@@ -943,6 +980,18 @@ def selftest():
     checks.append(("MQTT air-quality payload ingested",
                    STORE.nodes.get("!0eeeeeee", {}).get("env", {}).get("pm25_ugm3") == 33))
 
+    # --publish: snapshot file shape
+    import tempfile
+    tmp = tempfile.mktemp(suffix=".json")
+    write_publish_snapshot(3600, path=tmp)
+    with open(tmp) as fh:
+        pub = json.load(fh)
+    os.unlink(tmp)
+    checks.append(("published snapshot carries date + normalisation + nodes",
+                   "observation_date" in pub and "published_at" in pub
+                   and pub.get("normalisation", {}).get("scale_max") == 100
+                   and isinstance(pub.get("mesh_nodes"), list) and len(pub["mesh_nodes"]) > 0))
+
     # builtin MQTT codec, offline
     class _Fake:
         def __init__(self, data): self.data = data
@@ -1012,6 +1061,8 @@ def main():
     ap.add_argument("--listen-port", type=int, default=1883)
     ap.add_argument("--serial", nargs="?", const="auto", default=None, metavar="PORT",
                     help="node plugged into THIS computer via USB — reads telemetry off the port (auto-detects; needs: pip3 install meshtastic)")
+    ap.add_argument("--publish", type=int, metavar="MIN", default=None,
+                    help="every MIN minutes, write data/snapshots/meshtastic.json and git commit+push it — so GitHub Pages shows the mesh to everyone")
     ap.add_argument("--debug", action="store_true", help="log every packet reaching the bridge, with its port and keys")
     ap.add_argument("--request-telemetry", action="store_true", help="also broadcast telemetry requests every 5 min (some firmwares print 'No response from node' — harmless)")
     ap.add_argument("--diagnose", action="store_true", help="read the plugged node's real config over USB and say why data is/isn't flowing")
@@ -1059,11 +1110,25 @@ Dashboard → Environmental × Community → Attach a reading → Live feed:
   min 0 · max 100 · direction: higher = better
 Ctrl-C to stop; state persists in {STATE_PATH}.""")
     try:
+        last_pub = 0
         while True:
             time.sleep(60)
             STORE.save()
+            if args.publish and time.time() - last_pub >= args.publish * 60:
+                last_pub = time.time()
+                try:
+                    p = write_publish_snapshot(args.active_window * 60)
+                    _log("snapshot → repo: " + git_publish(p))
+                except Exception as e:
+                    _log(f"publish failed ({e}) — will retry")
     except KeyboardInterrupt:
         STORE.save()
+        if args.publish:
+            try:
+                p = write_publish_snapshot(args.active_window * 60)
+                _log("final snapshot → repo: " + git_publish(p))
+            except Exception:
+                pass
         print("\nState saved. Bye.")
 
 

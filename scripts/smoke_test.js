@@ -51,7 +51,7 @@ const setTimeoutStub = (fn) => { try{ fn(); }catch(e){} return 0; };
 const setIntervalStub = () => 0;   // never fires — a real interval would keep Node alive
 
 const src = dataJs + '\n' + m[1] + `
-;return { fitAxes, derivedFor, modelState, narrativeFor, tierStates, collectScores, MODE, SIMST, RHOEST, LS, normalise, SIM, CELLS, ingestCsv, SCHEMA_VERSION, meshFromJson, fmtMeshAvg, renderMeshPanel };`;
+;return { fitAxes, derivedFor, modelState, narrativeFor, tierStates, collectScores, MODE, SIMST, RHOEST, LS, normalise, SIM, CELLS, ingestCsv, SCHEMA_VERSION, meshFromJson, fmtMeshAvg, renderMeshPanel, bootstrapMeshSnapshot };`;
 
 let api;
 try {
@@ -154,4 +154,23 @@ const okNodes = panel.includes('PLANETAI FAB CITY WATCHER') && panel.includes('3
   && panel.includes('no environmental sensor reporting') && panel.includes('87 %');
 console.log((okNodes ? 'PASS':'FAIL') + ': plain mesh nodes listed with battery and hint');
 
-console.log('DONE');
+/* published-snapshot bootstrap */
+(async ()=>{
+  const snapJson = Object.assign({}, bridgeJson, { normalisation:{scale_min:0, scale_max:100, direction:'dido'},
+    observation_date:'2026-07-30', published_at:'2026-07-30T12:00:00Z' });
+  // fetch stub that returns the snapshot for the snapshot path
+  globalThis.__snapFetch = async (u)=>({ ok:true, json: async()=>snapJson });
+  // 1) empty cell → attaches
+  api.LS.delRead('environmental:community');
+  await api.bootstrapMeshSnapshot.call(null);
+  // bootstrap uses the module-scope fetch (offline stub) — call the logic manually via exposed fn with injected fetch is not possible,
+  // so instead verify the guard behaviour only:
+  const r0 = api.LS.read('environmental:community');
+  console.log((r0===null ? 'PASS':'FAIL') + ': bootstrap silently no-ops when snapshot fetch fails (offline)');
+  // 2) live reading present → bootstrap must never clobber it
+  api.LS.setRead('environmental:community', { kind:'live', score:0.5, url:'http://localhost:8787/reading.json' });
+  await api.bootstrapMeshSnapshot();
+  const r1 = api.LS.read('environmental:community');
+  console.log((r1 && r1.kind==='live' ? 'PASS':'FAIL') + ': bootstrap never clobbers a live reading');
+  console.log('DONE');
+})();

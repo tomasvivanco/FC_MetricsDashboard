@@ -1204,7 +1204,7 @@ function renderMeshPanel(key){
       <tr><th>Node</th><th>Temp</th><th>Humidity</th><th>Pressure</th><th>IAQ</th><th>PM2.5</th><th>Battery</th><th>Position</th><th>Last seen</th><th>Uptime 24 h</th></tr>
       ${rows || '<tr><td colspan="10" class="tiny">No nodes seen yet — is the bridge running?</td></tr>'}
     </table></div>
-    ${MODE.get()==='sim' ? '' : `<div style="margin-top:0.6rem; display:flex; gap:8px; align-items:center;">
+    ${MODE.get()==='sim' || !r.url ? (r.origin==='snapshot:meshtastic-auto' ? `<p class="tiny" style="margin-top:0.5rem;">Published snapshot${r.publishedAt?' · '+esc(r.publishedAt):''} — the operator's bridge pushes updates; this page re-checks every 5 minutes. Running the bridge locally? Use the Live-feed panel below to switch this cell to live.</p>` : '') : `<div style="margin-top:0.6rem; display:flex; gap:8px; align-items:center;">
       <button type="button" class="btn" id="meshRefresh">Refresh from bridge</button>
       <span class="status-line" id="meshStatus" style="margin:0;"></span>
     </div>`}
@@ -2170,6 +2170,43 @@ function pollLiveReadings(){
 }
 setTimeout(pollLiveReadings, 2500);
 setInterval(pollLiveReadings, 60000);
+
+/* Published mesh snapshot: when the operator's bridge runs with --publish,
+   the repo carries data/snapshots/meshtastic.json — so anyone opening this
+   page (GitHub Pages included) sees the mesh as a dated STATIC reading,
+   no local bridge required. Discipline: it auto-attaches only when the cell
+   is empty or holds an older auto-attached snapshot; a live reading or
+   anything a person entered is never touched. */
+async function bootstrapMeshSnapshot(){
+  const KEY = 'environmental:community';
+  try{
+    const cur = LS.read(KEY);
+    if(cur && cur.origin !== 'snapshot:meshtastic-auto') return;   // never clobber user data
+    const res = await fetch('data/snapshots/meshtastic.json', {cache:'no-store'});
+    if(!res.ok) return;
+    const s = await res.json();
+    if(!s || !s.normalisation || typeof s.uptime_24h_pct !== 'number') return;
+    if(cur && cur.publishedAt && cur.publishedAt === s.published_at) return;   // already current
+    const n = s.normalisation;
+    const score = normalise(s.uptime_24h_pct, n.scale_min, n.scale_max, n.direction || 'dido');
+    if(score === null) return;
+    const ix = findIndicator(KEY, (s.binds_to || {}).indicator || 'Neighbourhood sensing uptime');
+    LS.setRead(KEY, {
+      kind:'static', score, value:s.uptime_24h_pct, unit:'% of last 24 h',
+      indIx: ix === -1 ? undefined : ix,
+      min:n.scale_min, max:n.scale_max, dir:n.direction || 'dido',
+      obsDate: s.observation_date || String(s.updated_at || '').slice(0,10),
+      source: 'Meshtastic mesh — published snapshot (data/snapshots/meshtastic.json), git history is the ledger',
+      mesh: meshFromJson(s),
+      origin: 'snapshot:meshtastic-auto',
+      publishedAt: s.published_at,
+      savedAt: new Date().toISOString().slice(0,10)
+    });
+    buildMatrix(); renderBanner();
+  }catch(e){ /* file:// or no snapshot yet — silently fine */ }
+}
+setTimeout(bootstrapMeshSnapshot, 1200);
+setInterval(bootstrapMeshSnapshot, 300000);
 </script>
 </body>
 </html>
