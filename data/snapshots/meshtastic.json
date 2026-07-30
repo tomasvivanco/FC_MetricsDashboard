@@ -4,11 +4,11 @@
   "cell": "environmental:community",
   "indicator": "Neighbourhood sensing uptime"
  },
- "updated_at": "2026-07-30T11:39:42Z",
+ "updated_at": "2026-07-30T12:03:11Z",
  "uptime_24h_pct": 2.8,
  "buckets_filled": 8,
  "buckets_total": 288,
- "sensors_connected": 3,
+ "sensors_connected": 1,
  "mesh_nodes": [
   {
    "node": "!8f491db0",
@@ -50,7 +50,7 @@
    "name": "Meshtastic 6adc",
    "short": "6adc",
    "is_sensor": true,
-   "connected": true,
+   "connected": false,
    "last": {
     "temperature_c": 26.04,
     "relative_humidity_pct": 58.44,
@@ -82,7 +82,7 @@
    "name": "PLANETAI FAB CITY WATCHER",
    "short": "PLAN",
    "is_sensor": true,
-   "connected": true,
+   "connected": false,
    "last": {
     "temperature_c": 26.16,
     "lux": 0.0
@@ -99,11 +99,10 @@
  "nodes_total": 5,
  "sensors_seen_24h": 3,
  "averages": {
-  "barometric_pressure_hpa": 1003.76,
-  "temperature_c": 26.4,
-  "relative_humidity_pct": 53.8,
-  "lux": 0.0,
-  "iaq": 82.0
+  "relative_humidity_pct": 49.15,
+  "barometric_pressure_hpa": 1003.87,
+  "temperature_c": 27.01,
+  "iaq": 50.0
  },
  "sensors": [
   {
@@ -128,7 +127,7 @@
    "node": "!8f496adc",
    "name": "Meshtastic 6adc",
    "short": "6adc",
-   "connected": true,
+   "connected": false,
    "last": {
     "temperature_c": 26.04,
     "relative_humidity_pct": 58.44,
@@ -143,7 +142,7 @@
    "node": "!f6baca57",
    "name": "PLANETAI FAB CITY WATCHER",
    "short": "PLAN",
-   "connected": true,
+   "connected": false,
    "last": {
     "temperature_c": 26.16,
     "lux": 0.0
@@ -164,6 +163,6 @@
   "direction": "dido"
  },
  "observation_date": "2026-07-30",
- "published_at": "2026-07-30T11:39:42Z",
+ "published_at": "2026-07-30T12:03:11Z",
  "note": "Published by scripts/meshtastic_bridge.py --publish. Git history is the provenance ledger."
 }
