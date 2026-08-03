@@ -1,0 +1,42 @@
+{
+  "slug": "smart-citizen",
+  "source": "Smart Citizen API (api.smartcitizen.me/v0/devices, near+within)",
+  "fetched_at": "2026-08-03T10:07:41.391Z",
+  "observation_date": "2026-08-03",
+  "binds_to": {
+    "cell": "environmental:city",
+    "indicator": "Community sensors reporting"
+  },
+  "normalisation": {
+    "scale_min": 0,
+    "scale_max": 50,
+    "direction": "dido",
+    "note": "Only kits with a reading in the last 30 days count — the BCN archive audit found ~98% dormant."
+  },
+  "values": [
+    {
+      "city": "boston",
+      "value": 26,
+      "unit": "active kits / 20 km",
+      "total_registered": 500
+    },
+    {
+      "city": "barcelona",
+      "value": 2,
+      "unit": "active kits / 20 km",
+      "total_registered": 500
+    },
+    {
+      "city": "santiago",
+      "value": 24,
+      "unit": "active kits / 20 km",
+      "total_registered": 500
+    },
+    {
+      "city": "bali",
+      "value": 24,
+      "unit": "active kits / 20 km",
+      "total_registered": 500
+    }
+  ]
+}

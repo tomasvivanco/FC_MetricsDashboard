@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-08-03T10:07:41.392Z",
+  "note": "Written by scripts/fetch_snapshots.js. Git history of this folder is the provenance ledger.",
+  "snapshots": [
+    {
+      "file": "fablabs-io.json",
+      "slug": "fablabs-io",
+      "observation_date": "2026-08-03",
+      "binds_to": {
+        "cell": "economic:city",
+        "indicator": "Fab lab density in catchment"
+      }
+    },
+    {
+      "file": "meshtastic.json",
+      "observation_date": "2026-07-30",
+      "binds_to": {
+        "cell": "environmental:community",
+        "indicator": "Neighbourhood sensing uptime"
+      }
+    },
+    {
+      "file": "smart-citizen.json",
+      "slug": "smart-citizen",
+      "observation_date": "2026-08-03",
+      "binds_to": {
+        "cell": "environmental:city",
+        "indicator": "Community sensors reporting"
+      }
+    }
+  ]
+}
