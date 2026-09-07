@@ -1,8 +1,8 @@
 {
   "slug": "fablabs-io",
   "source": "fablabs.io registry (api.fablabs.io/0/labs)",
-  "fetched_at": "2026-08-31T13:55:03.350Z",
-  "observation_date": "2026-08-31",
+  "fetched_at": "2026-09-07T12:37:10.911Z",
+  "observation_date": "2026-09-07",
   "binds_to": {
     "cell": "economic:city",
     "indicator": "Fab lab density in catchment"
