@@ -1,8 +1,8 @@
 {
   "slug": "fablabs-io",
   "source": "fablabs.io registry (api.fablabs.io/0/labs)",
-  "fetched_at": "2026-09-07T12:37:10.911Z",
-  "observation_date": "2026-09-07",
+  "fetched_at": "2026-09-14T12:51:57.657Z",
+  "observation_date": "2026-09-14",
   "binds_to": {
     "cell": "economic:city",
     "indicator": "Fab lab density in catchment"
@@ -13,7 +13,7 @@
     "direction": "dido",
     "note": "Practical ceiling of 25 labs in a 50 km catchment — a proposed network peer benchmark, not canon."
   },
-  "universe": 2856,
+  "universe": 2860,
   "values": [
     {
       "city": "boston",
