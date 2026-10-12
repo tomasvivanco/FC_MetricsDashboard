@@ -1,8 +1,8 @@
 {
   "slug": "smart-citizen",
   "source": "Smart Citizen API (api.smartcitizen.me/v0/devices, near+within)",
-  "fetched_at": "2026-10-05T14:45:23.770Z",
-  "observation_date": "2026-10-05",
+  "fetched_at": "2026-10-12T15:30:59.407Z",
+  "observation_date": "2026-10-12",
   "binds_to": {
     "cell": "environmental:city",
     "indicator": "Community sensors reporting"
@@ -16,7 +16,7 @@
   "values": [
     {
       "city": "boston",
-      "value": 26,
+      "value": 25,
       "unit": "active kits / 20 km",
       "total_registered": 500
     },
@@ -28,13 +28,13 @@
     },
     {
       "city": "santiago",
-      "value": 37,
+      "value": 36,
       "unit": "active kits / 20 km",
       "total_registered": 500
     },
     {
       "city": "bali",
-      "value": 30,
+      "value": 32,
       "unit": "active kits / 20 km",
       "total_registered": 500
     }
