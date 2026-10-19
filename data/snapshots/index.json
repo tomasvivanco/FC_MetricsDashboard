@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-10-12T15:30:59.409Z",
+  "generated_at": "2026-10-19T13:21:40.374Z",
   "note": "Written by scripts/fetch_snapshots.js. Git history of this folder is the provenance ledger.",
   "snapshots": [
     {
       "file": "fablabs-io.json",
       "slug": "fablabs-io",
-      "observation_date": "2026-10-12",
+      "observation_date": "2026-10-19",
       "binds_to": {
         "cell": "economic:city",
         "indicator": "Fab lab density in catchment"
@@ -22,7 +22,7 @@
     {
       "file": "smart-citizen.json",
       "slug": "smart-citizen",
-      "observation_date": "2026-10-12",
+      "observation_date": "2026-10-19",
       "binds_to": {
         "cell": "environmental:city",
         "indicator": "Community sensors reporting"
