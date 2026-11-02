@@ -1,8 +1,8 @@
 {
   "slug": "smart-citizen",
   "source": "Smart Citizen API (api.smartcitizen.me/v0/devices, near+within)",
-  "fetched_at": "2026-10-26T13:08:08.093Z",
-  "observation_date": "2026-10-26",
+  "fetched_at": "2026-11-02T15:59:32.500Z",
+  "observation_date": "2026-11-02",
   "binds_to": {
     "cell": "environmental:city",
     "indicator": "Community sensors reporting"
@@ -22,19 +22,19 @@
     },
     {
       "city": "barcelona",
-      "value": 6,
+      "value": 5,
       "unit": "active kits / 20 km",
       "total_registered": 500
     },
     {
       "city": "santiago",
-      "value": 34,
+      "value": 33,
       "unit": "active kits / 20 km",
       "total_registered": 500
     },
     {
       "city": "bali",
-      "value": 41,
+      "value": 46,
       "unit": "active kits / 20 km",
       "total_registered": 500
     }
